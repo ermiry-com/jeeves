@@ -7,6 +7,11 @@
 
 #include <cerver/cerver.h>
 
+#include <cerver/http/http.h>
+#include <cerver/http/route.h>
+#include <cerver/http/request.h>
+#include <cerver/http/response.h>
+
 #include <cerver/utils/utils.h>
 #include <cerver/utils/log.h>
 
@@ -19,6 +24,16 @@ unsigned int PORT = CERVER_DEFAULT_PORT;
 unsigned int CERVER_RECEIVE_BUFFER_SIZE = CERVER_DEFAULT_RECEIVE_BUFFER_SIZE;
 unsigned int CERVER_TH_THREADS = CERVER_DEFAULT_POOL_THREADS;
 unsigned int CERVER_CONNECTION_QUEUE = CERVER_DEFAULT_CONNECTION_QUEUE;
+
+static HttpResponse *oki_doki = NULL;
+static HttpResponse *bad_request = NULL;
+static HttpResponse *server_error = NULL;
+static HttpResponse *bad_user = NULL;
+
+static HttpResponse *jeeves_works = NULL;
+static HttpResponse *current_version = NULL;
+
+#pragma region main
 
 static unsigned int jeeves_env_get_port (void) {
 	
@@ -108,6 +123,51 @@ static unsigned int jeeves_init_env (void) {
 
 }
 
+static unsigned int jeeves_init_responses (void) {
+
+	unsigned int retval = 1;
+
+	oki_doki = http_response_json_key_value (
+		(http_status) 200, "oki", "doki"
+	);
+
+	bad_request = http_response_json_key_value (
+		(http_status) 400, "error", "Bad request!"
+	);
+
+	server_error = http_response_json_key_value (
+		(http_status) 500, "error", "Internal server error!"
+	);
+
+	bad_user = http_response_json_key_value (
+		(http_status) 400, "error", "Bad user!"
+	);
+
+	jeeves_works = http_response_json_key_value (
+		(http_status) 200, "msg", "Barcel works!"
+	);
+
+	char *status = c_string_create (
+		"%s - %s", JEEVES_VERSION_NAME, JEEVES_VERSION_DATE
+	);
+
+	if (status) {
+		current_version = http_response_json_key_value (
+			(http_status) 200, "version", status
+		);
+
+		free (status);
+	}
+
+	if (
+		oki_doki && bad_request && server_error && bad_user
+		&& jeeves_works && current_version
+	) retval = 0;
+
+	return retval;
+
+}
+
 // inits jeeves main values
 unsigned int jeeves_init (void) {
 
@@ -117,6 +177,8 @@ unsigned int jeeves_init (void) {
 		unsigned int errors = 0;
 
 		errors |= jeeves_handler_init ();
+
+		errors |= jeeves_init_responses ();
 
 		retval = errors;
 	}
@@ -130,8 +192,53 @@ unsigned int jeeves_end (void) {
 
 	unsigned int errors = 0;
 
+	http_respponse_delete (oki_doki);
+	http_respponse_delete (bad_request);
+	http_respponse_delete (server_error);
+	http_respponse_delete (bad_user);
+
+	http_respponse_delete (jeeves_works);
+	http_respponse_delete (current_version);
+
 	jeeves_handler_end ();
 
 	return errors;
 
 }
+
+#pragma endregion
+
+#pragma region routes
+
+// GET /jeeves
+void jeeves_handler (
+	const HttpReceive *http_receive,
+	const HttpRequest *request
+) {
+
+	(void) http_response_send (jeeves_works, http_receive);
+
+}
+
+// GET /jeeves/version
+void jeeves_version_handler (
+	const HttpReceive *http_receive,
+	const HttpRequest *request
+) {
+
+	(void) http_response_send (current_version, http_receive);
+
+}
+
+// GET /jeeves/auth
+void jeeves_auth_handler (
+	const HttpReceive *http_receive,
+	const HttpRequest *request
+) {
+
+	// TODO:
+	(void) http_response_send (oki_doki, http_receive);
+
+}
+
+#pragma endregion
