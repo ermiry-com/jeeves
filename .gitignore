@@ -1,0 +1,12 @@
+.vscode
+
+build
+bin
+objs
+
+libs
+
+data
+uploads
+
+keys
