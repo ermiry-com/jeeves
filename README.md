@@ -4,9 +4,9 @@
 ```
 sudo docker run \
   -it \
-  --name jeeves --rm \
-  -p 5000:5000 \
-  -v /home/ermiry/Documents/ermiry/Projects/jeeves:/home/jeeves \
+  --name api --rm \
+  -p 5000:5000 --net jeeves \
+  -v /home/ermiry/Documents/ermiry/Projects/jeeves-web/jeeves:/home/jeeves \
   -e CURR_ENV=development \
   -e PORT=5000 \
   -e PRIV_KEY=/home/jeeves/keys/key.key -e PUB_KEY=/home/jeeves/keys/key.pub \
