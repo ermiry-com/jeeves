@@ -19,6 +19,8 @@
 
 #include "controllers/users.h"
 
+#include "routes/jobs.h"
+#include "routes/service.h"
 #include "routes/users.h"
 
 Cerver *jeeves_cerver = NULL;
@@ -44,20 +46,41 @@ static void end (int dummy) {
 static void jeeves_set_routes (HttpCerver *http_cerver) {
 
 	/* register top level route */
-	// GET /jeeves
-	HttpRoute *jeeves_route = http_route_create (REQUEST_METHOD_GET, "jeeves", jeeves_handler);
+	// GET /api/jeeves
+	HttpRoute *jeeves_route = http_route_create (REQUEST_METHOD_GET, "api/jeeves", jeeves_handler);
 	http_cerver_route_register (http_cerver, jeeves_route);
 
 	/* register jeeves children routes */
-	// GET /jeeves/version
+	// GET /api/jeeves/version
 	HttpRoute *jeeves_version_route = http_route_create (REQUEST_METHOD_GET, "version", jeeves_version_handler);
 	http_route_child_add (jeeves_route, jeeves_version_route);
 
-	// GET /jeeves/auth
+	// GET /api/jeeves/auth
 	HttpRoute *jeeves_auth_route = http_route_create (REQUEST_METHOD_GET, "auth", jeeves_auth_handler);
 	http_route_set_auth (jeeves_auth_route, HTTP_ROUTE_AUTH_TYPE_BEARER);
 	http_route_set_decode_data (jeeves_auth_route, jeeves_user_parse_from_json, jeeves_user_delete);
 	http_route_child_add (jeeves_route, jeeves_auth_route);
+
+	/*** jobs ***/
+
+	// GET /api/jeeves/jobs
+	HttpRoute *jeeves_jobs_route = http_route_create (REQUEST_METHOD_GET, "jobs", jeeves_get_jobs_handler);
+	http_route_set_auth (jeeves_jobs_route, HTTP_ROUTE_AUTH_TYPE_BEARER);
+	http_route_set_decode_data (jeeves_jobs_route, jeeves_user_parse_from_json, jeeves_user_delete);
+	http_route_child_add (jeeves_route, jeeves_jobs_route);
+
+	// POST /api/jeeves/jobs
+	http_route_set_handler (jeeves_jobs_route, REQUEST_METHOD_POST, jeeves_create_job_handler);
+
+	// GET /api/jeeves/jobs/test
+	HttpRoute *jeeves_jobs_test_route = http_route_create (REQUEST_METHOD_GET, "jobs/test", jeeves_jobs_test_handler);
+	http_route_child_add (jeeves_route, jeeves_jobs_test_route);
+
+	// GET /api/jeeves/jobs/:id/info
+	HttpRoute *jeeves_jobs_info_route = http_route_create (REQUEST_METHOD_GET, "jobs/:id/info", jeeves_job_info_handler);
+	http_route_set_auth (jeeves_jobs_info_route, HTTP_ROUTE_AUTH_TYPE_BEARER);
+	http_route_set_decode_data (jeeves_jobs_info_route, jeeves_user_parse_from_json, jeeves_user_delete);
+	http_route_child_add (jeeves_route, jeeves_jobs_info_route);
 
 }
 
@@ -69,11 +92,11 @@ static void jeeves_set_users_routes (HttpCerver *http_cerver) {
 	http_cerver_route_register (http_cerver, users_route);
 
 	/* register users children routes */
-	// POST api/users/login
+	// POST /api/users/login
 	HttpRoute *users_login_route = http_route_create (REQUEST_METHOD_POST, "login", users_login_handler);
 	http_route_child_add (users_route, users_login_route);
 
-	// POST api/users/register
+	// POST /api/users/register
 	HttpRoute *users_register_route = http_route_create (REQUEST_METHOD_POST, "register", users_register_handler);
 	http_route_child_add (users_route, users_register_route);
 
