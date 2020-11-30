@@ -13,7 +13,7 @@
 
 #include "models/user.h"
 
-// GET /jeeves
+// GET /api/jeeves
 void jeeves_handler (
 	const HttpReceive *http_receive,
 	const HttpRequest *request
@@ -23,7 +23,7 @@ void jeeves_handler (
 
 }
 
-// GET /jeeves/version
+// GET /api/jeeves/version
 void jeeves_version_handler (
 	const HttpReceive *http_receive,
 	const HttpRequest *request
@@ -33,7 +33,7 @@ void jeeves_version_handler (
 
 }
 
-// GET /jeeves/auth
+// GET /api/jeeves/auth
 void jeeves_auth_handler (
 	const HttpReceive *http_receive,
 	const HttpRequest *request
