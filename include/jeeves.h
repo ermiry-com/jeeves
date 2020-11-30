@@ -5,8 +5,6 @@
 
 #define JEEVES_UPLOADS_TEMP_DIR                   "/var/uploads"
 
-struct _HttpReceive;
-struct _HttpRequest;
 struct _HttpResponse;
 
 extern unsigned int PORT;
@@ -22,36 +20,13 @@ extern struct _HttpResponse *bad_request;
 extern struct _HttpResponse *server_error;
 extern struct _HttpResponse *bad_user;
 
-#pragma region main
+extern struct _HttpResponse *jeeves_works;
+extern struct _HttpResponse *current_version;
 
 // inits jeeves main values
 extern unsigned int jeeves_init (void);
 
 // ends jeeves main values
 extern unsigned int jeeves_end (void);
-
-#pragma endregion
-
-#pragma region routes
-
-// GET /jeeves
-void jeeves_handler (
-	const struct _HttpReceive *http_receive,
-	const struct _HttpRequest *request
-);
-
-// GET /jeeves/version
-void jeeves_version_handler (
-	const struct _HttpReceive *http_receive,
-	const struct _HttpRequest *request
-);
-
-// GET /jeeves/auth
-void jeeves_auth_handler (
-	const struct _HttpReceive *http_receive,
-	const struct _HttpRequest *request
-);
-
-#pragma endregion
 
 #endif

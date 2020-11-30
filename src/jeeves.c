@@ -44,10 +44,8 @@ HttpResponse *bad_request = NULL;
 HttpResponse *server_error = NULL;
 HttpResponse *bad_user = NULL;
 
-static HttpResponse *jeeves_works = NULL;
-static HttpResponse *current_version = NULL;
-
-#pragma region main
+HttpResponse *jeeves_works = NULL;
+HttpResponse *current_version = NULL;
 
 static unsigned int jeeves_env_get_port (void) {
 	
@@ -392,40 +390,3 @@ unsigned int jeeves_end (void) {
 	return errors;
 
 }
-
-#pragma endregion
-
-#pragma region routes
-
-// GET /jeeves
-void jeeves_handler (
-	const HttpReceive *http_receive,
-	const HttpRequest *request
-) {
-
-	(void) http_response_send (jeeves_works, http_receive);
-
-}
-
-// GET /jeeves/version
-void jeeves_version_handler (
-	const HttpReceive *http_receive,
-	const HttpRequest *request
-) {
-
-	(void) http_response_send (current_version, http_receive);
-
-}
-
-// GET /jeeves/auth
-void jeeves_auth_handler (
-	const HttpReceive *http_receive,
-	const HttpRequest *request
-) {
-
-	// TODO:
-	(void) http_response_send (oki_doki, http_receive);
-
-}
-
-#pragma endregion
