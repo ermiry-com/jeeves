@@ -21,6 +21,7 @@
 #include "version.h"
 
 #include "models/action.h"
+#include "models/job.h"
 #include "models/role.h"
 #include "models/user.h"
 
@@ -286,6 +287,9 @@ static unsigned int jeeves_mongo_connect (void) {
 			// open handle to actions collection
 			errors |= actions_collection_get ();
 
+			// open handle to jobs collection
+			errors |= jobs_collection_get ();
+
 			// open handle to roles collection
 			errors |= roles_collection_get ();
 
@@ -350,6 +354,8 @@ static unsigned int jeeves_mongo_end (void) {
 
 	if (mongo_get_status () == MONGO_STATUS_CONNECTED) {
 		actions_collection_close ();
+
+		jobs_collection_close ();
 
 		roles_collection_close ();
 
