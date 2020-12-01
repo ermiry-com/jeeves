@@ -5,11 +5,14 @@
 #include <cerver/http/http.h>
 #include <cerver/http/request.h>
 #include <cerver/http/response.h>
+#include <cerver/http/json/json.h>
 
 #include <cerver/utils/utils.h>
 #include <cerver/utils/log.h>
 
+#include "errors.h"
 #include "jeeves.h"
+#include "mongo.h"
 
 #include "models/job.h"
 #include "models/user.h"
@@ -91,15 +94,132 @@ void jeeves_get_jobs_handler (
 		}
 	}
 
+	else {
+		(void) http_response_send (bad_user, http_receive);
+	}
+
+}
+
+static void jeeves_job_parse_json (
+	json_t *json_body,
+	const char **name,
+	const char **description
+) {
+
+	// get values from json to create a new transaction
+	const char *key = NULL;
+	json_t *value = NULL;
+	if (json_typeof (json_body) == JSON_OBJECT) {
+		json_object_foreach (json_body, key, value) {
+			if (!strcmp (key, "name")) {
+				*name = json_string_value (value);
+				(void) printf ("name: \"%s\"\n", *name);
+			}
+
+			else if (!strcmp (key, "description")) {
+				*description = json_string_value (value);
+				(void) printf ("description: \"%s\"\n", *description);
+			}
+		}
+	}
+
+}
+
+static JeevesError jeeves_create_job_handler_internal (
+	JeevesJob **job,
+	const char *user_id, const String *request_body
+) {
+
+	JeevesError error = JEEVES_ERROR_NONE;
+
+	if (request_body) {
+		const char *name = NULL;
+		const char *description = NULL;
+
+		json_error_t json_error =  { 0 };
+		json_t *json_body = json_loads (request_body->str, 0, &json_error);
+		if (json_body) {
+			jeeves_job_parse_json (
+				json_body,
+				&name, &description
+			);
+
+			if (name) {
+				// TODO:
+			}
+
+			else {
+				error = JEEVES_ERROR_MISSING_VALUES;
+			}
+
+			json_decref (json_body);
+		}
+
+		else {
+			cerver_log_error (
+				"json_loads () - json error on line %d: %s\n", 
+				json_error.line, json_error.text
+			);
+
+			error = JEEVES_ERROR_BAD_REQUEST;
+		}
+	}
+
+	return error;
+
 }
 
 // POST /api/jeeves/jobs
+// A user has requested to create a new job
 void jeeves_create_job_handler (
 	const HttpReceive *http_receive,
 	const HttpRequest *request
 ) {
 
-	(void) http_response_send (oki_doki, http_receive);
+	User *user = (User *) request->decoded_data;
+	if (user) {
+		JeevesJob *job = NULL;
+
+		JeevesError error = jeeves_create_job_handler_internal (
+			&job,
+			user->id, request->body
+		);
+
+		if (error == JEEVES_ERROR_NONE) {
+			#ifdef JEEVES_DEBUG
+			jeeves_job_print (job);
+			#endif
+
+			// insert into the db
+			if (!mongo_insert_one (
+				jobs_collection,
+				jeeves_job_to_bson (job)
+			)) {
+				// return success to user
+				(void) http_response_send (
+					oki_doki,
+					http_receive
+				);
+			}
+
+			else {
+				(void) http_response_send (
+					job_created_bad,
+					http_receive
+				);
+			}
+
+			// TODO: delete
+		}
+
+		else {
+			jeeves_error_send_response (error, http_receive);
+		}
+	}
+
+	else {
+		(void) http_response_send (bad_user, http_receive);
+	}
 
 }
 
@@ -119,6 +239,13 @@ void jeeves_job_info_handler (
 	const HttpRequest *request
 ) {
 
-	(void) http_response_send (oki_doki, http_receive);
+	User *user = (User *) request->decoded_data;
+	if (user) {
+		(void) http_response_send (oki_doki, http_receive);
+	}
+
+	else {
+		(void) http_response_send (bad_user, http_receive);
+	}
 
 }
