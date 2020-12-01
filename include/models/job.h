@@ -24,6 +24,8 @@ typedef struct JeevesJob {
 	char id[JOB_ID_LEN];
 	bson_oid_t oid;
 
+	bson_oid_t user_oid;
+
 	char name[JOB_NAME_LEN];
 	char description[JOB_DESCRIPTION_LEN];
 
@@ -38,5 +40,10 @@ extern void *jeeves_job_new (void);
 extern void jeeves_job_delete (void *job_ptr);
 
 extern void jeeves_job_print (JeevesJob *job);
+
+// get all the jobs that are related to a user
+extern mongoc_cursor_t *jeeves_jobs_get_all_by_user (
+	const bson_oid_t *user_oid, const bson_t *opts
+);
 
 #endif

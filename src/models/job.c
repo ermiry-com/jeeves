@@ -72,3 +72,26 @@ void jeeves_job_print (JeevesJob *job) {
 	}
 
 }
+
+// get all the jobs that are related to a user
+mongoc_cursor_t *jeeves_jobs_get_all_by_user (
+	const bson_oid_t *user_oid, const bson_t *opts
+) {
+
+	mongoc_cursor_t *retval = NULL;
+
+	if (user_oid) {
+		bson_t *query = bson_new ();
+		if (query) {
+			(void) bson_append_oid (query, "user", -1, user_oid);
+
+			retval = mongo_find_all_cursor_with_opts (
+				jobs_collection,
+				query, opts
+			);
+		}
+	}
+
+	return retval;
+
+}
