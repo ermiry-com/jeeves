@@ -73,6 +73,131 @@ void jeeves_job_print (JeevesJob *job) {
 
 }
 
+static void jeeves_job_doc_parse (
+	JeevesJob *job, const bson_t *job_doc
+) {
+
+	bson_iter_t iter = { 0 };
+	if (bson_iter_init (&iter, job_doc)) {
+		char *key = NULL;
+		bson_value_t *value = NULL;
+		while (bson_iter_next (&iter)) {
+			key = (char *) bson_iter_key (&iter);
+			value = (bson_value_t *) bson_iter_value (&iter);
+
+			if (!strcmp (key, "_id")) {
+				bson_oid_copy (&value->value.v_oid, &job->oid);
+				bson_oid_to_string (&job->oid, job->id);
+			}
+
+			else if (!strcmp (key, "user"))
+				bson_oid_copy (&value->value.v_oid, &job->user_oid);
+
+			else if (!strcmp (key, "name") && value->value.v_utf8.str) 
+				(void) strncpy (job->name, value->value.v_utf8.str, JOB_NAME_LEN);
+
+			else if (!strcmp (key, "description") && value->value.v_utf8.str) 
+				(void) strncpy (job->description, value->value.v_utf8.str, JOB_DESCRIPTION_LEN);
+
+			else if (!strcmp (key, "created")) 
+				job->created = (time_t) bson_iter_date_time (&iter) / 1000;
+
+			else if (!strcmp (key, "started")) 
+				job->started = (time_t) bson_iter_date_time (&iter) / 1000;
+
+			else if (!strcmp (key, "ended")) 
+				job->ended = (time_t) bson_iter_date_time (&iter) / 1000;
+		}
+	}
+
+}
+
+const bson_t *jeeves_job_find_by_oid_and_user (
+	const bson_oid_t *oid, const bson_oid_t *user_oid,
+	const bson_t *query_opts
+) {
+
+	const bson_t *retval = NULL;
+
+	bson_t *job_query = bson_new ();
+	if (job_query) {
+		(void) bson_append_oid (job_query, "_id", -1, oid);
+		(void) bson_append_oid (job_query, "user", -1, user_oid);
+
+		retval = mongo_find_one_with_opts (jobs_collection, job_query, query_opts);
+	}
+
+	return retval;
+
+}
+
+u8 jeeves_job_get_by_oid_and_user (
+	JeevesJob *job,
+	const bson_oid_t *oid, const bson_oid_t *user_oid,
+	const bson_t *query_opts
+) {
+
+	u8 retval = 1;
+
+	if (job) {
+		const bson_t *job_doc = jeeves_job_find_by_oid_and_user (oid, user_oid, query_opts);
+		if (job_doc) {
+			jeeves_job_doc_parse (job, job_doc);
+			bson_destroy ((bson_t *) job_doc);
+
+			retval = 0;
+		}
+	}
+
+	return retval;
+
+}
+
+bson_t *jeeves_job_to_bson (JeevesJob *job) {
+
+	bson_t *doc = NULL;
+
+    if (job) {
+        doc = bson_new ();
+        if (doc) {
+            (void) bson_append_oid (doc, "_id", -1, &job->oid);
+
+			(void) bson_append_oid (doc, "user", -1, &job->user_oid);
+
+			(void) bson_append_utf8 (doc, "name", -1, job->name, -1);
+			(void) bson_append_utf8 (doc, "description", -1, job->description, -1);
+
+			(void) bson_append_date_time (doc, "created", -1, job->created * 1000);
+			(void) bson_append_date_time (doc, "started", -1, job->started * 1000);
+			(void) bson_append_date_time (doc, "ended", -1, job->ended * 1000);
+        }
+    }
+
+    return doc;
+
+}
+
+bson_t *jeeves_job_update_bson (JeevesJob *job) {
+
+	bson_t *doc = NULL;
+
+    if (job) {
+        doc = bson_new ();
+        if (doc) {
+			bson_t set_doc = { 0 };
+			(void) bson_append_document_begin (doc, "$set", -1, &set_doc);
+
+			(void) bson_append_utf8 (&set_doc, "name", -1, job->name, -1);
+			(void) bson_append_utf8 (&set_doc, "description", -1, job->description, -1);
+
+			(void) bson_append_document_end (doc, &set_doc);
+        }
+    }
+
+    return doc;
+
+}
+
 // get all the jobs that are related to a user
 mongoc_cursor_t *jeeves_jobs_get_all_by_user (
 	const bson_oid_t *user_oid, const bson_t *opts

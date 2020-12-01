@@ -41,6 +41,21 @@ extern void jeeves_job_delete (void *job_ptr);
 
 extern void jeeves_job_print (JeevesJob *job);
 
+extern const bson_t *jeeves_job_find_by_oid_and_user (
+	const bson_oid_t *oid, const bson_oid_t *user_oid,
+	const bson_t *query_opts
+);
+
+extern u8 jeeves_job_get_by_oid_and_user (
+	JeevesJob *job,
+	const bson_oid_t *oid, const bson_oid_t *user_oid,
+	const bson_t *query_opts
+);
+
+extern bson_t *jeeves_job_to_bson (JeevesJob *job);
+
+extern bson_t *jeeves_job_update_bson (JeevesJob *job);
+
 // get all the jobs that are related to a user
 extern mongoc_cursor_t *jeeves_jobs_get_all_by_user (
 	const bson_oid_t *user_oid, const bson_t *opts
