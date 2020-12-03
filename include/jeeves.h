@@ -19,9 +19,13 @@ extern struct _HttpResponse *oki_doki;
 extern struct _HttpResponse *bad_request;
 extern struct _HttpResponse *server_error;
 extern struct _HttpResponse *bad_user;
+extern struct _HttpResponse *missing_values;
 
 extern struct _HttpResponse *jeeves_works;
 extern struct _HttpResponse *current_version;
+
+extern struct _HttpResponse *job_created_bad;
+extern struct _HttpResponse *job_deleted_bad;
 
 // inits jeeves main values
 extern unsigned int jeeves_init (void);

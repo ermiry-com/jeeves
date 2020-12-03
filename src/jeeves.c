@@ -44,9 +44,13 @@ HttpResponse *oki_doki = NULL;
 HttpResponse *bad_request = NULL;
 HttpResponse *server_error = NULL;
 HttpResponse *bad_user = NULL;
+HttpResponse *missing_values = NULL;
 
 HttpResponse *jeeves_works = NULL;
 HttpResponse *current_version = NULL;
+
+HttpResponse *job_created_bad = NULL;
+HttpResponse *job_deleted_bad = NULL;
 
 static unsigned int jeeves_env_get_port (void) {
 	
@@ -244,12 +248,26 @@ static unsigned int jeeves_init_responses (void) {
 		(http_status) 400, "error", "Bad user!"
 	);
 
+	missing_values = http_response_json_key_value (
+		(http_status) 400, "error", "Missing values!"
+	);
+
 	jeeves_works = http_response_json_key_value (
-		(http_status) 200, "msg", "Barcel works!"
+		(http_status) 200, "msg", "Jeeves works!"
 	);
 
 	char *status = c_string_create (
 		"%s - %s", JEEVES_VERSION_NAME, JEEVES_VERSION_DATE
+	);
+
+	/*** jobs ***/
+
+	job_created_bad = http_response_json_key_value (
+		(http_status) 400, "error", "Failed to create job!"
+	);
+
+	job_deleted_bad = http_response_json_key_value (
+		(http_status) 400, "error", "Failed to delete job!"
 	);
 
 	if (status) {
@@ -261,8 +279,9 @@ static unsigned int jeeves_init_responses (void) {
 	}
 
 	if (
-		oki_doki && bad_request && server_error && bad_user
+		oki_doki && bad_request && server_error && bad_user && missing_values
 		&& jeeves_works && current_version
+		&& job_created_bad && job_deleted_bad
 	) retval = 0;
 
 	return retval;
@@ -377,9 +396,13 @@ unsigned int jeeves_end (void) {
 	http_respponse_delete (bad_request);
 	http_respponse_delete (server_error);
 	http_respponse_delete (bad_user);
+	http_respponse_delete (missing_values);
 
 	http_respponse_delete (jeeves_works);
 	http_respponse_delete (current_version);
+
+	http_respponse_delete (job_created_bad);
+	http_respponse_delete (job_deleted_bad);
 
 	errors |= jeeves_mongo_end ();
 
