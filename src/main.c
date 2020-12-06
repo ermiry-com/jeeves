@@ -82,6 +82,18 @@ static void jeeves_set_routes (HttpCerver *http_cerver) {
 	http_route_set_decode_data (jeeves_jobs_info_route, jeeves_user_parse_from_json, jeeves_user_delete);
 	http_route_child_add (jeeves_route, jeeves_jobs_info_route);
 
+	// GET /api/jeeves/jobs/:id/start
+	HttpRoute *jeeves_jobs_start_route = http_route_create (REQUEST_METHOD_GET, "jobs/:id/start", jeeves_job_start_handler);
+	http_route_set_auth (jeeves_jobs_start_route, HTTP_ROUTE_AUTH_TYPE_BEARER);
+	http_route_set_decode_data (jeeves_jobs_start_route, jeeves_user_parse_from_json, jeeves_user_delete);
+	http_route_child_add (jeeves_route, jeeves_jobs_start_route);
+
+	// GET /api/jeeves/jobs/:id/stop
+	HttpRoute *jeeves_jobs_stop_route = http_route_create (REQUEST_METHOD_GET, "jobs/:id/stop", jeeves_job_stop_handler);
+	http_route_set_auth (jeeves_jobs_stop_route, HTTP_ROUTE_AUTH_TYPE_BEARER);
+	http_route_set_decode_data (jeeves_jobs_stop_route, jeeves_user_parse_from_json, jeeves_user_delete);
+	http_route_child_add (jeeves_route, jeeves_jobs_stop_route);
+
 }
 
 static void jeeves_set_users_routes (HttpCerver *http_cerver) {

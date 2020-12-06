@@ -239,9 +239,49 @@ void jeeves_job_info_handler (
 	const HttpRequest *request
 ) {
 
+	const String *job_id = request->params[0];
+
 	User *user = (User *) request->decoded_data;
 	if (user) {
-		(void) http_response_send (oki_doki, http_receive);
+		// TODO:
+	}
+
+	else {
+		(void) http_response_send (bad_user, http_receive);
+	}
+
+}
+
+// GET /api/jeeves/jobs/:id/start
+void jeeves_job_start_handler (
+	const HttpReceive *http_receive,
+	const HttpRequest *request
+) {
+
+	const String *job_id = request->params[0];
+
+	User *user = (User *) request->decoded_data;
+	if (user) {
+		// TODO:
+	}
+
+	else {
+		(void) http_response_send (bad_user, http_receive);
+	}
+
+}
+
+// GET /api/jeeves/jobs/:id/stop
+void jeeves_job_stop_handler (
+	const HttpReceive *http_receive,
+	const HttpRequest *request
+) {
+
+	const String *job_id = request->params[0];
+
+	User *user = (User *) request->decoded_data;
+	if (user) {
+		// TODO:
 	}
 
 	else {
