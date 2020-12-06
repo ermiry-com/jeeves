@@ -7,9 +7,6 @@
 #include <cerver/collections/dlist.h>
 #include <cerver/collections/pool.h>
 
-#include <cerver/handler.h>
-#include <cerver/version.h>
-
 #include <cerver/http/http.h>
 #include <cerver/http/request.h>
 #include <cerver/http/response.h>
