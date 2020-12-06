@@ -17,6 +17,8 @@
 #include "models/job.h"
 #include "models/user.h"
 
+#include "controllers/jobs.h"
+
 static char *jeeves_get_jobs_handler_generate_json (
 	mongoc_cursor_t *jobs_cursor,
 	size_t *json_len
@@ -262,7 +264,31 @@ void jeeves_job_start_handler (
 
 	User *user = (User *) request->decoded_data;
 	if (user) {
-		// TODO:
+		bson_oid_init_from_string (&user->oid, user->id);
+
+		// check that the job belongs to the user
+		JeevesJob *job = jeeves_job_get_by_id_and_user (
+			job_id, &user->oid
+		);
+
+		if (job) {
+			// TODO: start job
+
+			// update the job in the db
+			if (!mongo_update_one (
+				jobs_collection,
+				jeeves_job_query_oid (&job->oid),
+				jeeves_job_start_update_bson ()
+			)) {
+				(void) http_response_send (oki_doki, http_receive);
+			}
+
+			jeeves_job_return (job);
+		}
+
+		else {
+			(void) http_response_send (bad_request, http_receive);
+		}
 	}
 
 	else {
@@ -281,7 +307,31 @@ void jeeves_job_stop_handler (
 
 	User *user = (User *) request->decoded_data;
 	if (user) {
-		// TODO:
+		bson_oid_init_from_string (&user->oid, user->id);
+
+		// check that the job belongs to the user
+		JeevesJob *job = jeeves_job_get_by_id_and_user (
+			job_id, &user->oid
+		);
+
+		if (job) {
+			// TODO: stop job
+
+			// update the job in the db
+			if (!mongo_update_one (
+				jobs_collection,
+				jeeves_job_query_oid (&job->oid),
+				jeeves_job_stop_update_bson ()
+			)) {
+				(void) http_response_send (oki_doki, http_receive);
+			}
+
+			jeeves_job_return (job);
+		}
+
+		else {
+			(void) http_response_send (bad_request, http_receive);
+		}
 	}
 
 	else {
