@@ -31,6 +31,7 @@ typedef struct JeevesJob {
 
 	time_t created;
 	time_t started;
+	time_t stopped;
 	time_t ended;
 
 } JeevesJob;
@@ -40,6 +41,8 @@ extern void *jeeves_job_new (void);
 extern void jeeves_job_delete (void *job_ptr);
 
 extern void jeeves_job_print (JeevesJob *job);
+
+extern bson_t *jeeves_job_query_oid (const bson_oid_t *oid);
 
 extern const bson_t *jeeves_job_find_by_oid_and_user (
 	const bson_oid_t *oid, const bson_oid_t *user_oid,
@@ -55,6 +58,12 @@ extern u8 jeeves_job_get_by_oid_and_user (
 extern bson_t *jeeves_job_to_bson (JeevesJob *job);
 
 extern bson_t *jeeves_job_update_bson (JeevesJob *job);
+
+extern bson_t *jeeves_job_start_update_bson (void);
+
+extern bson_t *jeeves_job_stop_update_bson (void);
+
+extern bson_t *jeeves_job_end_update_bson (void);
 
 // get all the jobs that are related to a user
 extern mongoc_cursor_t *jeeves_jobs_get_all_by_user (

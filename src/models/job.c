@@ -112,6 +112,21 @@ static void jeeves_job_doc_parse (
 
 }
 
+bson_t *jeeves_job_query_oid (const bson_oid_t *oid) {
+
+	bson_t *query = NULL;
+
+	if (oid) {
+		query = bson_new ();
+		if (query) {
+			(void) bson_append_oid (query, "_id", -1, oid);
+		}
+	}
+
+	return query;
+
+}
+
 const bson_t *jeeves_job_find_by_oid_and_user (
 	const bson_oid_t *oid, const bson_oid_t *user_oid,
 	const bson_t *query_opts
@@ -195,6 +210,48 @@ bson_t *jeeves_job_update_bson (JeevesJob *job) {
     }
 
     return doc;
+
+}
+
+bson_t *jeeves_job_start_update_bson (void) {
+
+	bson_t *doc = bson_new ();
+	if (doc) {
+		bson_t set_doc = { 0 };
+		(void) bson_append_document_begin (doc, "$set", -1, &set_doc);
+		bson_append_date_time (&set_doc, "started", -1, time (NULL));
+		(void) bson_append_document_end (doc, &set_doc);
+	}
+
+	return doc;
+
+}
+
+bson_t *jeeves_job_stop_update_bson (void) {
+	
+	bson_t *doc = bson_new ();
+	if (doc) {
+		bson_t set_doc = { 0 };
+		(void) bson_append_document_begin (doc, "$set", -1, &set_doc);
+		bson_append_date_time (&set_doc, "stopped", -1, time (NULL));
+		(void) bson_append_document_end (doc, &set_doc);
+	}
+
+	return doc;
+
+}
+
+bson_t *jeeves_job_end_update_bson (void) {
+	
+	bson_t *doc = bson_new ();
+	if (doc) {
+		bson_t set_doc = { 0 };
+		(void) bson_append_document_begin (doc, "$set", -1, &set_doc);
+		bson_append_date_time (&set_doc, "ended", -1, time (NULL));
+		(void) bson_append_document_end (doc, &set_doc);
+	}
+
+	return doc;
 
 }
 
