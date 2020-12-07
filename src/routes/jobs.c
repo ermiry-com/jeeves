@@ -253,7 +253,33 @@ void jeeves_job_info_handler (
 
 	User *user = (User *) request->decoded_data;
 	if (user) {
-		// TODO:
+		bson_oid_init_from_string (&user->oid, user->id);
+
+		bson_oid_t job_oid = { 0 };
+		bson_oid_init_from_string (&job_oid, job_id->str);
+
+		bson_t *job_bson = jeeves_job_find_by_oid_and_user (
+			&job_oid, &user->oid, NULL	
+		);
+
+		if (job_bson) {
+			size_t json_len = 0;
+			char *json = bson_as_relaxed_extended_json (
+				job_bson, &json_len
+			);
+
+			if (json) {
+				(void) http_response_json_custom_reference_send (
+					http_receive,
+					200,
+					json, json_len
+				);
+
+				free (json);
+			}
+			
+			bson_destroy (job_bson);
+		}
 	}
 
 	else {
