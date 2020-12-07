@@ -5,6 +5,8 @@
 
 #include <cerver/types/string.h>
 
+#include <cerver/collections/dlist.h>
+
 #include <cerver/cerver.h>
 #include <cerver/files.h>
 
@@ -18,9 +20,50 @@
 #include "jeeves.h"
 #include "worker.h"
 
-static void *jeeves_uploads_worker_thread (void *null_ptr);
+#include "controllers/jobs.h"
+
+#include "models/job.h"
+
+static DoubleList *active_jobs = NULL;
 
 static JobQueue *jeeves_uploads_worker_job_queue = NULL;
+
+static void *jeeves_uploads_worker_thread (void *null_ptr);
+
+#pragma region jobs
+
+static unsigned int jeeves_jobs_worker_init (void) {
+
+	unsigned int retval = 1;
+
+	active_jobs = dlist_init (jeeves_job_return, NULL);
+
+	return retval;
+
+}
+
+static unsigned int jeeves_jobs_worker_end (void) {
+
+	// TODO: stop any active job
+
+	dlist_delete (active_jobs);
+
+	return 0;
+
+}
+
+// a user has requested to start a new job
+// so create a dedicated job & process job's images
+// with selected configuration
+void jeevs_jobs_worker_create (JeevesJob *job) {
+
+	// TODO:
+
+}
+
+#pragma endregion
+
+#pragma region uploads
 
 JeevesUpload *jeeves_upload_new (const char *dirname, const char *user_id) {
 
@@ -40,7 +83,7 @@ void jeeves_upload_delete (void *jeeves_upload_ptr) {
 
 }
 
-unsigned int jeeves_uploads_worker_init (void) {
+static unsigned int jeeves_uploads_worker_init (void) {
 
 	unsigned int retval = 1;
 
@@ -58,7 +101,7 @@ unsigned int jeeves_uploads_worker_init (void) {
 
 }
 
-unsigned int jeeves_uploads_worker_end (void) {
+static unsigned int jeeves_uploads_worker_end (void) {
 
 	bsem_post (jeeves_uploads_worker_job_queue->has_jobs);
 
