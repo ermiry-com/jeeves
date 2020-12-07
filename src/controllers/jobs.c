@@ -113,7 +113,9 @@ JeevesJob *jeeves_job_get_by_id_and_user (
 
 void jeeves_job_return (void *jobs_ptr) {
 
-	(void) memset (jobs_ptr, 0, sizeof (JeevesJob));
-	(void) pool_push (jobs_pool, jobs_ptr);
+	if (jobs_ptr) {
+		(void) memset (jobs_ptr, 0, sizeof (JeevesJob));
+		(void) pool_push (jobs_pool, jobs_ptr);
+	}
 
 }
