@@ -34,11 +34,42 @@ static void *jeeves_uploads_worker_thread (void *null_ptr);
 
 #pragma region jobs
 
+typedef struct WorkerJob {
+
+	pthread_t thread_id;
+	JeevesJob *job;
+
+} WorkerJob;
+
+static WorkerJob *worker_job_new (void) {
+
+	WorkerJob *job = (WorkerJob *) malloc (sizeof (WorkerJob));
+	if (job) {
+		job->thread_id = 0;
+		job->job = NULL;
+	}
+
+	return job;
+
+}
+
+static void worker_job_delete (void *worker_job_ptr) {
+
+	if (worker_job_ptr) {
+		WorkerJob *worker_job = (WorkerJob *) worker_job_ptr;
+
+		jeeves_job_return (worker_job->job);
+
+		free (worker_job);
+	}
+
+}
+
 static unsigned int jeeves_jobs_worker_init (void) {
 
 	unsigned int retval = 1;
 
-	active_jobs = dlist_init (jeeves_job_return, NULL);
+	active_jobs = dlist_init (worker_job_delete, NULL);
 	if (active_jobs) retval = 0;
 
 	return retval;
@@ -63,7 +94,7 @@ bool jeeves_jobs_worker_check (const bson_oid_t *job_oid) {
 	ListElement *le = NULL;
 	dlist_for_each (active_jobs, le) {
 		if (!bson_oid_compare (
-			&((JeevesJob *) le->data)->id,
+			&((WorkerJob *) le->data)->job->oid,
 			job_oid
 		)) {
 			retval = true;
@@ -75,12 +106,51 @@ bool jeeves_jobs_worker_check (const bson_oid_t *job_oid) {
 
 }
 
+void *jeeves_jobs_worker_thread (void *worker_job_ptr) {
+
+	if (worker_job_ptr) {
+		WorkerJob *worker_job = (WorkerJob *) worker_job_ptr;
+
+		// TODO: process images
+
+		// TODO: update job's status in the db
+
+		// TODO: delete worker job
+	}
+
+	return NULL;
+
+}
+
 // a user has requested to start a new job
 // so create a dedicated job & process job's images
 // with selected configuration
 u8 jeeves_jobs_worker_create (JeevesJob *job) {
 
-	// TODO:
+	u8 retval = 1;
+
+	if (job) {
+		WorkerJob *worker_job = worker_job_new ();
+		if (worker_job) {
+			worker_job->job = job;
+
+			if (!thread_create_detachable (
+				&worker_job->thread_id,
+				jeeves_jobs_worker_thread,
+				worker_job
+			)) {
+				(void) dlist_insert_after (
+					active_jobs,
+					dlist_end (active_jobs),
+					worker_job
+				);
+
+				retval = 0;
+			}
+		}
+	}
+
+	return retval;
 
 }
 
