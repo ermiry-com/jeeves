@@ -13,6 +13,7 @@
 #include "errors.h"
 #include "jeeves.h"
 #include "mongo.h"
+#include "worker.h"
 
 #include "models/job.h"
 #include "models/user.h"
@@ -281,7 +282,7 @@ void jeeves_job_config_handler (
 static void jeeves_job_upload_handler_internal (
 	const HttpReceive *http_receive,
 	const HttpRequest *request,
-	JeevesJob *job
+	const char *user_id, JeevesJob *job
 ) {
 
 	// get images that will be added to the job
@@ -312,7 +313,10 @@ static void jeeves_job_upload_handler_internal (
 			jeeves_job_query_oid (&job->oid),
 			jeeves_job_images_push_update_bson (images)
 		)) {
-			// TODO: save images
+			// request UPLOADS worker to save frames to persistent storage
+			(void) jeeves_uploads_worker_push (
+				jeeves_upload_new (request->dirname->str, user_id)
+			);
 
 			(void) http_response_send (oki_doki, http_receive);
 		}
@@ -351,7 +355,7 @@ void jeeves_job_upload_handler (
 		if (job) {
 			jeeves_job_upload_handler_internal (
 				http_receive, request,
-				job
+				user->id, job
 			);
 
 			jeeves_job_return (job);
