@@ -299,6 +299,8 @@ bson_t *jeeves_job_to_bson (JeevesJob *job) {
 			(void) bson_append_utf8 (doc, "name", -1, job->name, -1);
 			(void) bson_append_utf8 (doc, "description", -1, job->description, -1);
 
+			(void) bson_append_int32 (doc, "status", -1, job->status);
+			
 			(void) bson_append_int32 (doc, "type", -1, job->type);
 
 			(void) bson_append_date_time (doc, "created", -1, job->created * 1000);
