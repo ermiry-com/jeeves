@@ -63,6 +63,8 @@ void jeeves_get_jobs_handler (
 
 	User *user = (User *) request->decoded_data;
 	if (user) {
+		bson_oid_init_from_string (&user->oid, user->id);
+
 		// get user's jobs from the db
 		mongoc_cursor_t *jobs_cursor = jeeves_jobs_get_all_by_user (
 			&user->oid, NULL
