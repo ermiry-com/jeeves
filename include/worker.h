@@ -1,16 +1,22 @@
 #ifndef _JEEVES_WORKER_H_
 #define _JEEVES_WORKER_H_
 
+#include <bson/bson.h>
+
+#include <cerver/types/types.h>
 #include <cerver/types/string.h>
 
 #include "models/job.h"
 
 #pragma region jobs
 
+// returns TRUE if the job is currently being running
+extern bool jeeves_jobs_worker_check (const bson_oid_t *job_oid);
+
 // a user has requested to start a new job
 // so create a dedicated job & process job's images
 // with selected configuration
-extern void jeevs_jobs_worker_create (JeevesJob *job);
+extern u8 jeeves_jobs_worker_create (JeevesJob *job);
 
 #pragma endregion
 

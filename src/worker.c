@@ -3,6 +3,8 @@
 
 #include <unistd.h>
 
+#include <bson/bson.h>
+
 #include <cerver/types/string.h>
 
 #include <cerver/collections/dlist.h>
@@ -37,6 +39,7 @@ static unsigned int jeeves_jobs_worker_init (void) {
 	unsigned int retval = 1;
 
 	active_jobs = dlist_init (jeeves_job_return, NULL);
+	if (active_jobs) retval = 0;
 
 	return retval;
 
@@ -52,10 +55,30 @@ static unsigned int jeeves_jobs_worker_end (void) {
 
 }
 
+// returns TRUE if the job is currently being running
+bool jeeves_jobs_worker_check (const bson_oid_t *job_oid) {
+
+	bool retval = false;
+
+	ListElement *le = NULL;
+	dlist_for_each (active_jobs, le) {
+		if (!bson_oid_compare (
+			&((JeevesJob *) le->data)->id,
+			job_oid
+		)) {
+			retval = true;
+			break;
+		}
+	}
+
+	return retval;
+
+}
+
 // a user has requested to start a new job
 // so create a dedicated job & process job's images
 // with selected configuration
-void jeevs_jobs_worker_create (JeevesJob *job) {
+u8 jeeves_jobs_worker_create (JeevesJob *job) {
 
 	// TODO:
 
