@@ -28,16 +28,28 @@ extern void jeeves_job_info_handler (
 	const struct _HttpRequest *request
 );
 
+// POST /api/jeeves/jobs/:id/config
+extern void jeeves_job_config_handler (
+	const struct _HttpReceive *http_receive,
+	const struct _HttpRequest *request
+);
+
+// POST /api/jeeves/jobs/:id/upload
+extern void jeeves_job_upload_handler (
+	const struct _HttpReceive *http_receive,
+	const struct _HttpRequest *request
+);
+
 // GET /api/jeeves/jobs/:id/start
 extern void jeeves_job_start_handler (
-	const HttpReceive *http_receive,
-	const HttpRequest *request
+	const struct _HttpReceive *http_receive,
+	const struct _HttpRequest *request
 );
 
 // GET /api/jeeves/jobs/:id/stop
 extern void jeeves_job_stop_handler (
-	const HttpReceive *http_receive,
-	const HttpRequest *request
+	const struct _HttpReceive *http_receive,
+	const struct _HttpRequest *request
 );
 
 #endif

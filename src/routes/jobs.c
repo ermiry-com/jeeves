@@ -254,6 +254,44 @@ void jeeves_job_info_handler (
 
 }
 
+// POST /api/jeeves/jobs/:id/config
+void jeeves_job_config_handler (
+	const HttpReceive *http_receive,
+	const HttpRequest *request
+) {
+
+	const String *job_id = request->params[0];
+
+	User *user = (User *) request->decoded_data;
+	if (user) {
+		// TODO:
+	}
+
+	else {
+		(void) http_response_send (bad_user, http_receive);
+	}
+
+}
+
+// POST /api/jeeves/jobs/:id/upload
+void jeeves_job_upload_handler (
+	const HttpReceive *http_receive,
+	const HttpRequest *request
+) {
+
+	const String *job_id = request->params[0];
+
+	User *user = (User *) request->decoded_data;
+	if (user) {
+		// TODO:
+	}
+
+	else {
+		(void) http_response_send (bad_user, http_receive);
+	}
+
+}
+
 // GET /api/jeeves/jobs/:id/start
 void jeeves_job_start_handler (
 	const HttpReceive *http_receive,
