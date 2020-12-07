@@ -514,6 +514,48 @@ void jeeves_job_upload_handler (
 
 }
 
+static void jeeves_job_start_handler_actual (
+	const HttpReceive *http_receive,
+	JeevesJob *job
+) {
+
+	// check if the job has NOT been started
+	if (
+		jeeves_jobs_worker_check (&job->oid), 
+		(job->status != JOB_STATUS_RUNNING)
+	) {
+		// start job
+		if (!jeeves_jobs_worker_create (job)) {
+			// update the job in the db
+			if (!mongo_update_one (
+				jobs_collection,
+				jeeves_job_query_oid (&job->oid),
+				jeeves_job_start_update_bson ()
+			)) {
+				(void) http_response_send (oki_doki, http_receive);
+			}
+
+			else {
+				jeeves_job_return (job);
+				cerver_log_error (
+					"jeeves_job_start_handler () - failed to update job status"
+				);
+				(void) http_response_send (server_error, http_receive);
+			}
+		}
+
+		else {
+			jeeves_job_return (job);
+			(void) http_response_send (server_error, http_receive);
+		}
+	}
+
+	else {
+		(void) http_response_send (bad_request, http_receive);
+	}
+
+}
+
 // GET /api/jeeves/jobs/:id/start
 void jeeves_job_start_handler (
 	const HttpReceive *http_receive,
@@ -532,18 +574,10 @@ void jeeves_job_start_handler (
 		);
 
 		if (job) {
-			// TODO: start job
-
-			// update the job in the db
-			if (!mongo_update_one (
-				jobs_collection,
-				jeeves_job_query_oid (&job->oid),
-				jeeves_job_start_update_bson ()
-			)) {
-				(void) http_response_send (oki_doki, http_receive);
-			}
-
-			jeeves_job_return (job);
+			jeeves_job_start_handler_actual (
+				http_receive,
+				job
+			);
 		}
 
 		else {
