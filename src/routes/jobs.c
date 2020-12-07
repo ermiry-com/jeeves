@@ -264,11 +264,65 @@ void jeeves_job_config_handler (
 
 	User *user = (User *) request->decoded_data;
 	if (user) {
-		// TODO:
+		// TODO: get configuration for selected job 
 	}
 
 	else {
 		(void) http_response_send (bad_user, http_receive);
+	}
+
+}
+
+static void jeeves_job_upload_handler_internal (
+	const HttpReceive *http_receive,
+	const HttpRequest *request,
+	JeevesJob *job
+) {
+
+	// get images that will be added to the job
+	DoubleList *filenames = http_request_multi_parts_get_all_saved_filenames (request);
+	if (filenames) {		
+		// create jobs images
+		const char *filename = NULL;
+		// JobImage *job_image = NULL;
+		int image_id = job->n_images - 1;
+		DoubleList *images = dlist_init (job_image_delete, NULL);
+		for (ListElement *le = dlist_start (filenames); le; le = le->next) {
+			filename = (const char *) le->data;
+
+			(void) dlist_insert_at_end_unsafe (
+				images,
+				job_image_create (
+					image_id,
+					filename, "null"
+				)
+			);
+
+			image_id += 1;
+		}
+
+		// update current job with new images
+		if (!mongo_update_one (
+			jobs_collection,
+			jeeves_job_query_oid (&job->oid),
+			jeeves_job_images_push_update_bson (images)
+		)) {
+			// TODO: save images
+
+			(void) http_response_send (oki_doki, http_receive);
+		}
+
+		else {
+			http_request_multi_part_discard_files (request);
+			(void) http_response_send (server_error, http_receive);
+		}
+
+		dlist_delete (images);
+	}
+
+	else {
+		cerver_log_warning ("No images in request!");
+		(void) http_response_send (bad_request, http_receive);
 	}
 
 }
@@ -283,10 +337,34 @@ void jeeves_job_upload_handler (
 
 	User *user = (User *) request->decoded_data;
 	if (user) {
-		// TODO:
+		bson_oid_init_from_string (&user->oid, user->id);
+
+		JeevesJob *job = jeeves_job_get_by_id_and_user (
+			job_id, &user->oid
+		);
+
+		if (job) {
+			jeeves_job_upload_handler_internal (
+				http_receive, request,
+				job
+			);
+
+			jeeves_job_return (job);
+		}
+
+		else {
+			cerver_log_warning (
+				"Job %s does NOT belong to user %s",
+				job_id->str, user->id
+			);
+
+			http_request_multi_part_discard_files (request);
+			(void) http_response_send (bad_request, http_receive);
+		}
 	}
 
 	else {
+		http_request_multi_part_discard_files (request);
 		(void) http_response_send (bad_user, http_receive);
 	}
 
