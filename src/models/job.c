@@ -67,10 +67,10 @@ JobType job_type_from_string (const char *type_string) {
 	JobType type = JOB_TYPE_NONE;
 
 	if (type_string) {
-		if (!strcmp (type_string, "Grayscale")) type = JOB_TYPE_GRAYSCALE;
-		else if (!strcmp (type_string, "Shift")) type = JOB_TYPE_SHIFT;
-		else if (!strcmp (type_string, "Clamp")) type = JOB_TYPE_CLAMP;
-		else if (!strcmp (type_string, "RGBtoHUE")) type = JOB_TYPE_RGB_TO_HUE;
+		if (!strcmp (type_string, "GRAYSCALE")) type = JOB_TYPE_GRAYSCALE;
+		else if (!strcmp (type_string, "SHIFT")) type = JOB_TYPE_SHIFT;
+		else if (!strcmp (type_string, "CLAMP")) type = JOB_TYPE_CLAMP;
+		else if (!strcmp (type_string, "RGB_TO_HUE")) type = JOB_TYPE_RGB_TO_HUE;
 	}
 
 	return type;
@@ -300,7 +300,7 @@ bson_t *jeeves_job_to_bson (JeevesJob *job) {
 			(void) bson_append_utf8 (doc, "description", -1, job->description, -1);
 
 			(void) bson_append_int32 (doc, "status", -1, job->status);
-			
+
 			(void) bson_append_int32 (doc, "type", -1, job->type);
 
 			(void) bson_append_date_time (doc, "created", -1, job->created * 1000);
