@@ -46,9 +46,9 @@ sudo docker run \
 
 #### GET api/jeeves/jobs
 **Access:** Private \
-**Description:** Returns all of the authenticated user's jobs \
+**Description:** Returns all the user's jobs \
 **Returns:**
-  - 200 and jobs json on success
+  - 200 on success
   - 401 on failed auth
   - 500 on server error
 
@@ -69,12 +69,46 @@ sudo docker run \
 
 #### GET api/jeeves/jobs/:id/info
 **Access:** Private \
-**Description:** Returns information about an existing user's job \
+**Description:** A user has requested more info of a single job \
 **Returns:**
-  - 200 and job's json on success
+  - 200 on success
+  - 401 on failed auth
+  - 500 on server error
+
+#### POST api/jeeves/jobs/:id/config
+**Access:** Private \
+**Description:** Request to update job's configuration \
+**Returns:**
+  - 200 on success
   - 400 on bad request
   - 401 on failed auth
-  - 404 on not found
+  - 500 on server error
+
+#### POST api/jeeves/jobs/:id/upload
+**Access:** Private \
+**Description:** Request to add images to be processed by job \
+**Returns:**
+  - 200 on success
+  - 400 on bad request
+  - 401 on failed auth
+  - 500 on server error
+
+#### GET api/jeeves/jobs/:id/start
+**Access:** Private \
+**Description:** A user has requested to start a job \
+**Returns:**
+  - 200 on success
+  - 400 on bad request
+  - 401 on failed auth
+  - 500 on server error
+
+#### GET api/jeeves/jobs/:id/stop
+**Access:** Private \
+**Description:** A user has requested to stop a job \
+**Returns:**
+  - 200 on success
+  - 400 on bad request
+  - 401 on failed auth
   - 500 on server error
 
 ### Users
