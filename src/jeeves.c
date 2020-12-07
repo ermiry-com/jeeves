@@ -26,6 +26,7 @@
 #include "models/role.h"
 #include "models/user.h"
 
+#include "controllers/jobs.h"
 #include "controllers/roles.h"
 #include "controllers/users.h"
 
@@ -363,6 +364,8 @@ unsigned int jeeves_init (void) {
 
 		errors |= jeeves_init_responses ();
 
+		errors |= jeeves_jobs_init ();
+
 		errors |= jeeves_uploads_worker_init ();
 
 		retval = errors;
@@ -383,8 +386,6 @@ static unsigned int jeeves_mongo_end (void) {
 
 		users_collection_close ();
 
-		(void) jeeves_uploads_worker_end ();
-
 		mongo_disconnect ();
 	}
 
@@ -396,6 +397,8 @@ static unsigned int jeeves_mongo_end (void) {
 unsigned int jeeves_end (void) {
 
 	unsigned int errors = 0;
+
+	(void) jeeves_uploads_worker_end ();
 
 	http_respponse_delete (oki_doki);
 	http_respponse_delete (bad_request);
@@ -416,6 +419,8 @@ unsigned int jeeves_end (void) {
 	jeeves_users_end ();
 
 	jeeves_handler_end ();
+
+	jeeves_jobs_end ();
 
 	str_delete ((String *) MONGO_URI);
 	str_delete ((String *) MONGO_APP_NAME);
