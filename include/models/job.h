@@ -24,6 +24,24 @@ extern unsigned int jobs_collection_get (void);
 
 extern void jobs_collection_close (void);
 
+#define JOB_STATUS_MAP(XX)						\
+	XX(0,	NONE, 			None)				\
+	XX(1,	WAITING, 		Waiting)			\
+	XX(2,	READY, 			READY)				\
+	XX(3,	STOPPED, 		Stopped)			\
+	XX(4,	INCOMPLETED, 	Incompleted)		\
+	XX(5,	DONE, 			Done)
+
+typedef enum JobStatus {
+
+	#define XX(num, name, string) JOB_STATUS_##name = num,
+	JOB_STATUS_MAP (XX)
+	#undef XX
+
+} JobStatus;
+
+extern const char *job_status_to_string (JobStatus status);
+
 #define JOB_TYPE_MAP(XX)						\
 	XX(0,	NONE, 			None)				\
 	XX(1,	GRAYSCALE, 		GrayScale)			\
@@ -70,6 +88,8 @@ typedef struct JeevesJob {
 	char name[JOB_NAME_LEN];
 	char description[JOB_DESCRIPTION_LEN];
 
+	JobStatus status;
+
 	JobType type;
 
 	int n_images;
@@ -109,9 +129,13 @@ extern bson_t *jeeves_job_to_bson (JeevesJob *job);
 
 extern bson_t *jeeves_job_update_bson (JeevesJob *job);
 
+extern bson_t *jeeves_job_status_update_bson (JobStatus status);
+
 extern bson_t *jeeves_job_type_update_bson (JobType type);
 
-extern bson_t *jeeves_job_images_push_update_bson (DoubleList *images);
+extern bson_t *jeeves_job_images_push_update_bson (
+	DoubleList *images
+);
 
 extern bson_t *jeeves_job_start_update_bson (void);
 

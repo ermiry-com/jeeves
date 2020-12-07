@@ -38,6 +38,18 @@ void jobs_collection_close (void) {
 
 }
 
+const char *job_status_to_string (JobStatus status) {
+
+	switch (status) {
+		#define XX(num, name, string) case JOB_STATUS_##name: return #string;
+		JOB_STATUS_MAP(XX)
+		#undef XX
+	}
+
+	return job_status_to_string (JOB_STATUS_NONE);
+
+}
+
 const char *job_type_to_string (JobType type) {
 
 	switch (type) {
@@ -165,7 +177,10 @@ static void jeeves_job_doc_parse (
 			else if (!strcmp (key, "description") && value->value.v_utf8.str) 
 				(void) strncpy (job->description, value->value.v_utf8.str, JOB_DESCRIPTION_LEN);
 
-			else if (!strcmp (key, "created"))
+			else if (!strcmp (key, "status"))
+				job->status = (JobStatus) value->value.v_int32;
+
+			else if (!strcmp (key, "type"))
 				job->type = (JobType) value->value.v_int32;
 
 			else if (!strcmp (key, "created")) 
@@ -299,6 +314,20 @@ bson_t *jeeves_job_update_bson (JeevesJob *job) {
     }
 
     return doc;
+
+}
+
+bson_t *jeeves_job_status_update_bson (JobStatus status) {
+
+	bson_t *doc = bson_new ();
+	if (doc) {
+		bson_t set_doc = { 0 };
+		(void) bson_append_document_begin (doc, "$set", -1, &set_doc);
+		(void) bson_append_int32 (&set_doc, "status", -1, status);
+		(void) bson_append_document_end (doc, &set_doc);
+	}
+
+	return doc;
 
 }
 
