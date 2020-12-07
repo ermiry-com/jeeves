@@ -3,8 +3,10 @@
 
 #include <stdbool.h>
 
-#define JEEVES_UPLOADS_TEMP_DIR                   "/var/uploads"
+#define JEEVES_UPLOADS_TEMP_DIR			"/var/uploads"
+#define JEEVES_UPLOADS_DIR				"/home/face/uploads"
 
+struct _Cerver;
 struct _HttpResponse;
 
 extern unsigned int PORT;
@@ -14,6 +16,8 @@ extern unsigned int CERVER_TH_THREADS;
 extern unsigned int CERVER_CONNECTION_QUEUE;
 
 extern bool ENABLE_USERS_ROUTES;
+
+extern struct _Cerver *jeeves_cerver;
 
 extern struct _HttpResponse *oki_doki;
 extern struct _HttpResponse *bad_request;

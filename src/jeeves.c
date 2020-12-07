@@ -19,6 +19,7 @@
 #include "jeeves.h"
 #include "mongo.h"
 #include "version.h"
+#include "worker.h"
 
 #include "models/action.h"
 #include "models/job.h"
@@ -362,6 +363,8 @@ unsigned int jeeves_init (void) {
 
 		errors |= jeeves_init_responses ();
 
+		errors |= jeeves_uploads_worker_init ();
+
 		retval = errors;
 	}
 
@@ -379,6 +382,8 @@ static unsigned int jeeves_mongo_end (void) {
 		roles_collection_close ();
 
 		users_collection_close ();
+
+		(void) jeeves_uploads_worker_end ();
 
 		mongo_disconnect ();
 	}
