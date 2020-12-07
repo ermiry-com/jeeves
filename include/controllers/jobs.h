@@ -11,6 +11,12 @@ extern unsigned int jeeves_jobs_init (void);
 
 extern void jeeves_jobs_end (void);
 
+extern JeevesJob *jeeves_job_create (
+	const char *user_id,
+	const char *name,
+	const char *description
+);
+
 extern JeevesJob *jeeves_job_get_by_id_and_user (
 	const String *job_id, const bson_oid_t *user_oid
 );

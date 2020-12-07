@@ -61,6 +61,30 @@ void jeeves_jobs_end (void) {
 
 }
 
+JeevesJob *jeeves_job_create (
+	const char *user_id,
+	const char *name,
+	const char *description
+) {
+
+	JeevesJob *job = (JeevesJob *) pool_pop (jobs_pool);
+	if (job) {
+		bson_oid_init (&job->oid, NULL);
+
+		bson_oid_init_from_string (&job->user_oid, user_id);
+
+		if (name) (void) strncpy (job->name, name, JOB_NAME_LEN);
+		if (description) (void) strncpy (job->description, description, JOB_DESCRIPTION_LEN);
+
+		job->status = JOB_STATUS_WAITING;
+
+		job->created = time (NULL);
+	}
+
+	return job;
+
+}
+
 JeevesJob *jeeves_job_get_by_id_and_user (
 	const String *job_id, const bson_oid_t *user_oid
 ) {

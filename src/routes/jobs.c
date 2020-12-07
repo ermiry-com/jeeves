@@ -147,7 +147,12 @@ static JeevesError jeeves_create_job_handler_internal (
 			);
 
 			if (name) {
-				// TODO:
+				*job = jeeves_job_create (
+					user_id,
+					name, description
+				);
+
+				if (*job == NULL) error = JEEVES_ERROR_SERVER_ERROR;
 			}
 
 			else {
@@ -211,7 +216,7 @@ void jeeves_create_job_handler (
 				);
 			}
 
-			// TODO: delete
+			jeeves_job_return (job);
 		}
 
 		else {
