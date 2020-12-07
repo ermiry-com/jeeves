@@ -195,3 +195,33 @@ static void *jeeves_uploads_worker_thread (void *null_ptr) {
 	return NULL;
 
 }
+
+#pragma endregion
+
+#pragma region main
+
+unsigned int jeeves_worker_init (void) {
+
+	unsigned int errors = 0;
+
+	errors |= jeeves_jobs_worker_init ();
+
+	errors |= jeeves_uploads_worker_init ();
+
+	return errors;
+
+}
+
+unsigned int jeeves_worker_end (void) {
+	
+	unsigned int errors = 0;
+
+	errors |= jeeves_jobs_worker_end ();
+
+	errors |= jeeves_uploads_worker_end ();
+
+	return errors;
+
+}
+
+#pragma endregion

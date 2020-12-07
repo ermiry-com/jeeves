@@ -3,6 +3,19 @@
 
 #include <cerver/types/string.h>
 
+#include "models/job.h"
+
+#pragma region jobs
+
+// a user has requested to start a new job
+// so create a dedicated job & process job's images
+// with selected configuration
+extern void jeevs_jobs_worker_create (JeevesJob *job);
+
+#pragma endregion
+
+#pragma region uploads
+
 #define JEEVES_UPLOAD_DIRNAME_LEN             256
 #define JEEVES_UPLOAD_USER_ID_LEN             32
 
@@ -21,12 +34,18 @@ extern void jeeves_upload_delete (
 	void *jeeves_upload_ptr
 );
 
-extern unsigned int jeeves_uploads_worker_init (void);
-
-extern unsigned int jeeves_uploads_worker_end (void);
-
 extern unsigned int jeeves_uploads_worker_push (
 	JeevesUpload *upload
 );
+
+#pragma endregion
+
+#pragma region main
+
+extern unsigned int jeeves_worker_init (void);
+
+extern unsigned int jeeves_worker_end (void);
+
+#pragma endregion
 
 #endif

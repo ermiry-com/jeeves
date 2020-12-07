@@ -366,7 +366,7 @@ unsigned int jeeves_init (void) {
 
 		errors |= jeeves_jobs_init ();
 
-		errors |= jeeves_uploads_worker_init ();
+		errors |= jeeves_worker_init ();
 
 		retval = errors;
 	}
@@ -398,7 +398,7 @@ unsigned int jeeves_end (void) {
 
 	unsigned int errors = 0;
 
-	(void) jeeves_uploads_worker_end ();
+	(void) jeeves_worker_end ();
 
 	http_respponse_delete (oki_doki);
 	http_respponse_delete (bad_request);
