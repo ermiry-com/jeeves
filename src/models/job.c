@@ -62,6 +62,21 @@ const char *job_type_to_string (JobType type) {
 
 }
 
+JobType job_type_from_string (const char *type_string) {
+
+	JobType type = JOB_TYPE_NONE;
+
+	if (type_string) {
+		if (!strcmp (type_string, "Grayscale")) type = JOB_TYPE_GRAYSCALE;
+		else if (!strcmp (type_string, "Shift")) type = JOB_TYPE_SHIFT;
+		else if (!strcmp (type_string, "Clamp")) type = JOB_TYPE_CLAMP;
+		else if (!strcmp (type_string, "RGBtoHUE")) type = JOB_TYPE_RGB_TO_HUE;
+	}
+
+	return type;
+
+}
+
 JobImage *job_image_new (void) {
 
 	JobImage *job_image = (JobImage *) malloc (sizeof (JobImage));
@@ -308,6 +323,26 @@ bson_t *jeeves_job_update_bson (JeevesJob *job) {
 
 			(void) bson_append_utf8 (&set_doc, "name", -1, job->name, -1);
 			(void) bson_append_utf8 (&set_doc, "description", -1, job->description, -1);
+
+			(void) bson_append_document_end (doc, &set_doc);
+        }
+    }
+
+    return doc;
+
+}
+
+bson_t *jeeves_job_config_update_bson (JeevesJob *job) {
+
+	bson_t *doc = NULL;
+
+    if (job) {
+        doc = bson_new ();
+        if (doc) {
+			bson_t set_doc = { 0 };
+			(void) bson_append_document_begin (doc, "$set", -1, &set_doc);
+
+			(void) bson_append_int32 (&set_doc, "type", -1, job->type);
 
 			(void) bson_append_document_end (doc, &set_doc);
         }

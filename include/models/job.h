@@ -59,6 +59,8 @@ typedef enum JobType {
 
 extern const char *job_type_to_string (JobType type);
 
+extern JobType job_type_from_string (const char *type_string);
+
 typedef struct JobImage {
 
 	int id;
@@ -128,6 +130,8 @@ extern u8 jeeves_job_get_by_oid_and_user (
 extern bson_t *jeeves_job_to_bson (JeevesJob *job);
 
 extern bson_t *jeeves_job_update_bson (JeevesJob *job);
+
+extern bson_t *jeeves_job_config_update_bson (JeevesJob *job);
 
 extern bson_t *jeeves_job_status_update_bson (JobStatus status);
 
