@@ -258,7 +258,7 @@ void jeeves_job_info_handler (
 		bson_oid_t job_oid = { 0 };
 		bson_oid_init_from_string (&job_oid, job_id->str);
 
-		bson_t *job_bson = jeeves_job_find_by_oid_and_user (
+		const bson_t *job_bson = jeeves_job_find_by_oid_and_user (
 			&job_oid, &user->oid, NULL	
 		);
 
@@ -278,7 +278,7 @@ void jeeves_job_info_handler (
 				free (json);
 			}
 			
-			bson_destroy (job_bson);
+			bson_destroy ((bson_t *) job_bson);
 		}
 	}
 
