@@ -277,8 +277,17 @@ void jeeves_job_info_handler (
 
 				free (json);
 			}
+
+			else {
+				(void) http_response_send (server_error, http_receive);
+			}
 			
 			bson_destroy ((bson_t *) job_bson);
+		}
+
+		else {
+			// TODO: change to job not found response
+			(void) http_response_send (server_error, http_receive);
 		}
 	}
 
