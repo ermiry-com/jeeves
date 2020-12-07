@@ -50,11 +50,63 @@ const char *job_type_to_string (JobType type) {
 
 }
 
+JobImage *job_image_new (void) {
+
+	JobImage *job_image = (JobImage *) malloc (sizeof (JobImage));
+	if (job_image) {
+		(void) memset (job_image, 0, sizeof (JobImage));
+	}
+
+	return job_image;
+
+}
+
+void job_image_delete (void *job_image_ptr) {
+
+	if (job_image_ptr) free (job_image_ptr);
+
+}
+
+JobImage *job_image_create (
+	const int image_id,
+	const char *original, const char *result
+) {
+
+	JobImage *job_image = job_image_new ();
+	if (job_image) {
+		job_image->id = image_id;
+		(void) strncpy (job_image->original, original, JOB_IMAGE_ORIGINAL_LEN);
+		(void) strncpy (job_image->result, result, JOB_IMAGE_RESULT_LEN);
+	}
+
+	return job_image;
+
+}
+
+bson_t *job_image_to_bson (JobImage *job_image) {
+
+	bson_t *doc = NULL;
+
+    if (job_image) {
+        doc = bson_new ();
+        if (doc) {
+			(void) bson_append_int32 (doc, "_id", -1, job_image->id);
+			(void) bson_append_utf8 (doc, "original", -1, job_image->original, -1);
+			(void) bson_append_utf8 (doc, "result", -1, job_image->result, -1);
+        }
+    }
+
+    return doc;
+
+}
+
 void *jeeves_job_new (void) {
 
 	JeevesJob *job = (JeevesJob *) malloc (sizeof (JeevesJob));
 	if (job) {
 		(void) memset (job, 0, sizeof (JeevesJob));
+
+		job->images = NULL;
 	}
 
 	return job;
@@ -141,6 +193,24 @@ bson_t *jeeves_job_query_oid (const bson_oid_t *oid) {
 	}
 
 	return query;
+
+}
+
+bson_t *jeeves_job_query_oid_and_user (
+	const bson_oid_t *oid, const bson_oid_t *user_oid
+) {
+
+	bson_t *job_query = NULL;
+	
+	if (oid && user_oid) {
+		job_query = bson_new ();
+		if (job_query) {
+			(void) bson_append_oid (job_query, "_id", -1, oid);
+			(void) bson_append_oid (job_query, "user", -1, user_oid);
+		}
+	}
+
+	return job_query;
 
 }
 
@@ -240,6 +310,67 @@ bson_t *jeeves_job_type_update_bson (JobType type) {
 		(void) bson_append_document_begin (doc, "$set", -1, &set_doc);
 		(void) bson_append_int32 (&set_doc, "type", -1, type);
 		(void) bson_append_document_end (doc, &set_doc);
+	}
+
+	return doc;
+
+}
+
+static void jeeves_job_images_push_update_bson_internal (
+	DoubleList *images, bson_t *doc
+) {
+
+	bson_t *push_doc = bson_new ();
+	if (push_doc) {
+		bson_t *images_doc = bson_new ();
+		if (images_doc) {
+			bson_t *each_array = bson_new ();
+			if (each_array) {
+				char buf[16] = { 0 };
+				const char *key = NULL;
+				size_t keylen = 0;
+				unsigned int i = 0;
+				bson_t *job_bson = NULL;
+				for (ListElement *le = dlist_start (images); le; le = le->next) {
+					keylen = bson_uint32_to_string (i, &key, buf, sizeof (buf));
+
+					job_bson = job_image_to_bson ((JobImage *) le->data);
+					if (job_bson) {
+						(void) bson_append_document (each_array, key, (int) keylen, job_bson);
+						bson_destroy (job_bson);
+					}
+
+					i++;
+				}
+
+				(void) bson_append_document (push_doc, "$each", -1, each_array);
+				
+				bson_destroy (each_array);
+			}
+
+			(void) bson_append_document (push_doc, "images", -1, images_doc);
+			
+			bson_destroy (images_doc);
+		}
+		
+		(void) bson_append_document (doc, "$push", -1, push_doc);
+
+		bson_destroy (push_doc);
+	}
+
+}
+
+bson_t *jeeves_job_images_push_update_bson (DoubleList *images) {
+
+	bson_t *doc = NULL;
+
+	if (images) {
+		doc = bson_new ();
+		if (doc) {
+			jeeves_job_images_push_update_bson_internal (
+				images, doc
+			);
+		}
 	}
 
 	return doc;

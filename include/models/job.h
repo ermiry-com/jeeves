@@ -8,9 +8,14 @@
 
 #include <cerver/types/types.h>
 
+#include <cerver/collections/dlist.h>
+
 #define JOB_ID_LEN						32
 #define JOB_NAME_LEN					512
 #define JOB_DESCRIPTION_LEN				1024
+
+#define JOB_IMAGE_ORIGINAL_LEN			512
+#define JOB_IMAGE_RESULT_LEN			512
 
 extern mongoc_collection_t *jobs_collection;
 
@@ -36,6 +41,25 @@ typedef enum JobType {
 
 extern const char *job_type_to_string (JobType type);
 
+typedef struct JobImage {
+
+	int id;
+	char original[JOB_IMAGE_ORIGINAL_LEN];
+	char result[JOB_IMAGE_RESULT_LEN];
+
+} JobImage;
+
+extern JobImage *job_image_new (void);
+
+extern void job_image_delete (void *job_image_ptr);
+
+extern JobImage *job_image_create (
+	const int image_id,
+	const char *original, const char *result
+);
+
+extern bson_t *job_image_to_bson (JobImage *job_image);
+
 typedef struct JeevesJob {
 
 	char id[JOB_ID_LEN];
@@ -47,6 +71,9 @@ typedef struct JeevesJob {
 	char description[JOB_DESCRIPTION_LEN];
 
 	JobType type;
+
+	int n_images;
+	DoubleList *images;
 
 	time_t created;
 	time_t started;
@@ -62,6 +89,10 @@ extern void jeeves_job_delete (void *job_ptr);
 extern void jeeves_job_print (JeevesJob *job);
 
 extern bson_t *jeeves_job_query_oid (const bson_oid_t *oid);
+
+extern bson_t *jeeves_job_query_oid_and_user (
+	const bson_oid_t *oid, const bson_oid_t *user_oid
+);
 
 extern const bson_t *jeeves_job_find_by_oid_and_user (
 	const bson_oid_t *oid, const bson_oid_t *user_oid,
@@ -79,6 +110,8 @@ extern bson_t *jeeves_job_to_bson (JeevesJob *job);
 extern bson_t *jeeves_job_update_bson (JeevesJob *job);
 
 extern bson_t *jeeves_job_type_update_bson (JobType type);
+
+extern bson_t *jeeves_job_images_push_update_bson (DoubleList *images);
 
 extern bson_t *jeeves_job_start_update_bson (void);
 
