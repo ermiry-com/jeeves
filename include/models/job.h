@@ -28,9 +28,10 @@ extern void jobs_collection_close (void);
 	XX(0,	NONE, 			None)				\
 	XX(1,	WAITING, 		Waiting)			\
 	XX(2,	READY, 			READY)				\
-	XX(3,	STOPPED, 		Stopped)			\
-	XX(4,	INCOMPLETED, 	Incompleted)		\
-	XX(5,	DONE, 			Done)
+	XX(3,	RUNNING, 		Running)			\
+	XX(4,	STOPPED, 		Stopped)			\
+	XX(5,	INCOMPLETED, 	Incompleted)		\
+	XX(6,	DONE, 			Done)
 
 typedef enum JobStatus {
 
