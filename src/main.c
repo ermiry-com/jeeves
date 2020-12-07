@@ -86,13 +86,13 @@ static void jeeves_set_routes (HttpCerver *http_cerver) {
 	http_route_child_add (jeeves_route, jeeves_jobs_info_route);
 
 	// POST /api/jeeves/jobs/:id/config
-	HttpRoute *jeeves_jobs_config_route = http_route_create (REQUEST_METHOD_GET, "jobs/:id/config", jeeves_job_config_handler);
+	HttpRoute *jeeves_jobs_config_route = http_route_create (REQUEST_METHOD_POST, "jobs/:id/config", jeeves_job_config_handler);
 	http_route_set_auth (jeeves_jobs_config_route, HTTP_ROUTE_AUTH_TYPE_BEARER);
 	http_route_set_decode_data (jeeves_jobs_config_route, jeeves_user_parse_from_json, jeeves_user_delete);
 	http_route_child_add (jeeves_route, jeeves_jobs_config_route);
 
 	// POST /api/jeeves/jobs/:id/upload
-	HttpRoute *jeeves_jobs_upload_route = http_route_create (REQUEST_METHOD_GET, "jobs/:id/upload", jeeves_job_upload_handler);
+	HttpRoute *jeeves_jobs_upload_route = http_route_create (REQUEST_METHOD_POST, "jobs/:id/upload", jeeves_job_upload_handler);
 	http_route_set_modifier (jeeves_jobs_upload_route, HTTP_ROUTE_MODIFIER_MULTI_PART);
 	http_route_set_auth (jeeves_jobs_upload_route, HTTP_ROUTE_AUTH_TYPE_BEARER);
 	http_route_set_decode_data (jeeves_jobs_upload_route, jeeves_user_parse_from_json, jeeves_user_delete);
