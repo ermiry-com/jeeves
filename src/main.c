@@ -1,8 +1,11 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 #include <signal.h>
 #include <time.h>
+
+#include <cerver/types/string.h>
 
 #include <cerver/version.h>
 #include <cerver/cerver.h>
@@ -127,6 +130,21 @@ static void jeeves_set_users_routes (HttpCerver *http_cerver) {
 
 }
 
+static String *jeeves_uploads_dirname_generator (
+	const CerverReceive *cr
+) {
+
+	String *dirname = str_new (NULL);
+	dirname->str = c_string_create (
+		"%d-%ld",
+		cr->connection->socket->sock_fd, time (NULL)
+	);
+	dirname->len = strlen (dirname->str);
+
+	return dirname;
+
+}
+
 static void start (void) {
 
 	jeeves_cerver = cerver_create (
@@ -148,6 +166,7 @@ static void start (void) {
 		HttpCerver *http_cerver = (HttpCerver *) jeeves_cerver->cerver_data;
 
 		http_cerver_set_uploads_path (http_cerver, JEEVES_UPLOADS_TEMP_DIR);
+		http_cerver_set_uploads_dirname_generator (http_cerver, jeeves_uploads_dirname_generator);
 
 		http_cerver_auth_set_jwt_algorithm (http_cerver, JWT_ALG_RS256);
 		http_cerver_auth_set_jwt_priv_key_filename (http_cerver, "keys/key.key");
