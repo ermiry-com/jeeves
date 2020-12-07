@@ -38,6 +38,18 @@ void jobs_collection_close (void) {
 
 }
 
+const char *job_type_to_string (JobType type) {
+
+	switch (type) {
+		#define XX(num, name, string) case JOB_TYPE_##name: return #string;
+		JOB_TYPE_MAP(XX)
+		#undef XX
+	}
+
+	return job_type_to_string (JOB_TYPE_NONE);
+
+}
+
 void *jeeves_job_new (void) {
 
 	JeevesJob *job = (JeevesJob *) malloc (sizeof (JeevesJob));
@@ -61,6 +73,8 @@ void jeeves_job_print (JeevesJob *job) {
 		(void) printf ("id: %s\n", job->id);
 		(void) printf ("name: %s\n", job->name);
 		(void) printf ("description: %s\n", job->description);
+
+		(void) printf ("type: %s\n", job_type_to_string (job->type));;
 
 		char buffer[128] = { 0 };
 		(void) strftime (buffer, 128, "%d/%m/%y - %T", gmtime (&job->created));
@@ -98,6 +112,9 @@ static void jeeves_job_doc_parse (
 
 			else if (!strcmp (key, "description") && value->value.v_utf8.str) 
 				(void) strncpy (job->description, value->value.v_utf8.str, JOB_DESCRIPTION_LEN);
+
+			else if (!strcmp (key, "created"))
+				job->type = (JobType) value->value.v_int32;
 
 			else if (!strcmp (key, "created")) 
 				job->created = (time_t) bson_iter_date_time (&iter) / 1000;
@@ -182,6 +199,8 @@ bson_t *jeeves_job_to_bson (JeevesJob *job) {
 			(void) bson_append_utf8 (doc, "name", -1, job->name, -1);
 			(void) bson_append_utf8 (doc, "description", -1, job->description, -1);
 
+			(void) bson_append_int32 (doc, "type", -1, job->type);
+
 			(void) bson_append_date_time (doc, "created", -1, job->created * 1000);
 			(void) bson_append_date_time (doc, "started", -1, job->started * 1000);
 			(void) bson_append_date_time (doc, "ended", -1, job->ended * 1000);
@@ -213,13 +232,27 @@ bson_t *jeeves_job_update_bson (JeevesJob *job) {
 
 }
 
+bson_t *jeeves_job_type_update_bson (JobType type) {
+
+	bson_t *doc = bson_new ();
+	if (doc) {
+		bson_t set_doc = { 0 };
+		(void) bson_append_document_begin (doc, "$set", -1, &set_doc);
+		(void) bson_append_int32 (&set_doc, "type", -1, type);
+		(void) bson_append_document_end (doc, &set_doc);
+	}
+
+	return doc;
+
+}
+
 bson_t *jeeves_job_start_update_bson (void) {
 
 	bson_t *doc = bson_new ();
 	if (doc) {
 		bson_t set_doc = { 0 };
 		(void) bson_append_document_begin (doc, "$set", -1, &set_doc);
-		bson_append_date_time (&set_doc, "started", -1, time (NULL));
+		(void) bson_append_date_time (&set_doc, "started", -1, time (NULL));
 		(void) bson_append_document_end (doc, &set_doc);
 	}
 
@@ -233,7 +266,7 @@ bson_t *jeeves_job_stop_update_bson (void) {
 	if (doc) {
 		bson_t set_doc = { 0 };
 		(void) bson_append_document_begin (doc, "$set", -1, &set_doc);
-		bson_append_date_time (&set_doc, "stopped", -1, time (NULL));
+		(void) bson_append_date_time (&set_doc, "stopped", -1, time (NULL));
 		(void) bson_append_document_end (doc, &set_doc);
 	}
 
@@ -247,7 +280,7 @@ bson_t *jeeves_job_end_update_bson (void) {
 	if (doc) {
 		bson_t set_doc = { 0 };
 		(void) bson_append_document_begin (doc, "$set", -1, &set_doc);
-		bson_append_date_time (&set_doc, "ended", -1, time (NULL));
+		(void) bson_append_date_time (&set_doc, "ended", -1, time (NULL));
 		(void) bson_append_document_end (doc, &set_doc);
 	}
 

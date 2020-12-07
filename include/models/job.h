@@ -19,6 +19,23 @@ extern unsigned int jobs_collection_get (void);
 
 extern void jobs_collection_close (void);
 
+#define JOB_TYPE_MAP(XX)						\
+	XX(0,	NONE, 			None)				\
+	XX(1,	GRAYSCALE, 		GrayScale)			\
+	XX(2,	SHIFT, 			Shift)				\
+	XX(3,	CLAMP, 			Clamp)				\
+	XX(4,	RGB_TO_HUE, 	RGB to HUE)
+
+typedef enum JobType {
+
+	#define XX(num, name, string) JOB_TYPE_##name = num,
+	JOB_TYPE_MAP (XX)
+	#undef XX
+
+} JobType;
+
+extern const char *job_type_to_string (JobType type);
+
 typedef struct JeevesJob {
 
 	char id[JOB_ID_LEN];
@@ -28,6 +45,8 @@ typedef struct JeevesJob {
 
 	char name[JOB_NAME_LEN];
 	char description[JOB_DESCRIPTION_LEN];
+
+	JobType type;
 
 	time_t created;
 	time_t started;
@@ -58,6 +77,8 @@ extern u8 jeeves_job_get_by_oid_and_user (
 extern bson_t *jeeves_job_to_bson (JeevesJob *job);
 
 extern bson_t *jeeves_job_update_bson (JeevesJob *job);
+
+extern bson_t *jeeves_job_type_update_bson (JobType type);
 
 extern bson_t *jeeves_job_start_update_bson (void);
 
