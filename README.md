@@ -6,6 +6,7 @@ sudo docker run \
   -it \
   --name api --rm \
   -p 5000:5000 --net jeeves \
+  --mount type=tmpfs,destination=/var/uploads,tmpfs-size=256m \
   -v /home/ermiry/Documents/ermiry/Projects/jeeves-web/jeeves:/home/jeeves \
   -e CURR_ENV=development \
   -e PORT=5000 \
