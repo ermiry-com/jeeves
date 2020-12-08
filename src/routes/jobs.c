@@ -391,6 +391,15 @@ void jeeves_job_config_handler (
 					jeeves_job_query_oid (&job->oid),
 					jeeves_job_config_update_bson (job)
 				)) {
+					// check if the job is ready to be started
+					if (job->n_images) {
+						(void) mongo_update_one (
+							jobs_collection,
+							jeeves_job_query_oid (&job->oid),
+							jeeves_job_status_update_bson (JOB_STATUS_READY)
+						);
+					}
+
 					(void) http_response_send (oki_doki, http_receive);
 				}
 
@@ -457,6 +466,15 @@ static void jeeves_job_upload_handler_internal (
 			jeeves_job_query_oid (&job->oid),
 			jeeves_job_images_add_bson (images)
 		)) {
+			// check if the job is ready to be started
+			if (job->type != JOB_TYPE_NONE) {
+				(void) mongo_update_one (
+					jobs_collection,
+					jeeves_job_query_oid (&job->oid),
+					jeeves_job_status_update_bson (JOB_STATUS_READY)
+				);
+			}
+			
 			// request UPLOADS worker to save frames to persistent storage
 			(void) jeeves_uploads_worker_push (
 				jeeves_upload_new (request->dirname->str, user_id)
@@ -532,6 +550,7 @@ static void jeeves_job_start_handler_actual (
 	if (
 		jeeves_jobs_worker_check (&job->oid), 
 		(job->status != JOB_STATUS_RUNNING)
+		&& (job->status == JOB_STATUS_READY)
 	) {
 		// start job
 		if (!jeeves_jobs_worker_create (job)) {
