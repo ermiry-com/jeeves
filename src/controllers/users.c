@@ -167,7 +167,7 @@ User *jeeves_user_create (
 
 }
 
-User *jeeves_user_get_by_email (const String *email) {
+User *jeeves_user_get_by_email (const char *email) {
 
 	User *user = NULL;
 	if (email) {
@@ -185,18 +185,18 @@ User *jeeves_user_get_by_email (const String *email) {
 }
 
 u8 jeeves_user_check_by_email (
-	const HttpReceive *http_receive, const String *email
+	const HttpReceive *http_receive, const char *email
 ) {
 
 	u8 retval = 1;
 
-	if (!mongo_check (users_collection, user_query_email (email->str))) {
+	if (!mongo_check (users_collection, user_query_email (email))) {
 		retval = 0;
 	}
 
 	else {
 		#ifdef JEEVES_DEBUG
-		cerver_log_warning ("Found matching user with email: %s", email->str);
+		cerver_log_warning ("Found matching user with email: %s", email);
 		#endif
 		(void) http_response_send (repeated_email, http_receive);
 	}

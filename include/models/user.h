@@ -7,7 +7,6 @@
 #include <bson/bson.h>
 
 #include <cerver/types/types.h>
-#include <cerver/types/string.h>
 
 #include <cerver/collections/dlist.h>
 
@@ -61,12 +60,12 @@ extern u8 user_get_by_id (
 
 // gets a user from the db by its email
 extern u8 user_get_by_email (
-	User *user, const String *email, const bson_t *query_opts
+	User *user, const char *email, const bson_t *query_opts
 );
 
 // gets a user from the db by its username
 extern u8 user_get_by_username (
-	User *user, const String *username, const bson_t *query_opts
+	User *user, const char *username, const bson_t *query_opts
 );
 
 extern bson_t *user_bson_create (User *user);

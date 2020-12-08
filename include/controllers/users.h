@@ -36,10 +36,10 @@ extern User *jeeves_user_create (
 	const bson_oid_t *role_oid
 );
 
-extern User *jeeves_user_get_by_email (const String *email);
+extern User *jeeves_user_get_by_email (const char *email);
 
 extern u8 jeeves_user_check_by_email (
-	const struct _HttpReceive *http_receive, const String *email
+	const struct _HttpReceive *http_receive, const char *email
 );
 
 // {
