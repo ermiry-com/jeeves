@@ -435,7 +435,7 @@ static void jeeves_job_upload_handler_internal (
 		// create jobs images
 		const char *filename = NULL;
 		// JobImage *job_image = NULL;
-		int image_id = job->n_images - 1;
+		int image_id = !job->n_images ? 0 : job->n_images - 1;
 		DoubleList *images = dlist_init (job_image_delete, NULL);
 		for (ListElement *le = dlist_start (filenames); le; le = le->next) {
 			filename = (const char *) le->data;
@@ -455,7 +455,7 @@ static void jeeves_job_upload_handler_internal (
 		if (!mongo_update_one (
 			jobs_collection,
 			jeeves_job_query_oid (&job->oid),
-			jeeves_job_images_push_update_bson (images)
+			jeeves_job_images_add_bson (images)
 		)) {
 			// request UPLOADS worker to save frames to persistent storage
 			(void) jeeves_uploads_worker_push (
