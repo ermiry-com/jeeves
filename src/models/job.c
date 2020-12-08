@@ -133,7 +133,7 @@ void *jeeves_job_new (void) {
 	if (job) {
 		(void) memset (job, 0, sizeof (JeevesJob));
 
-		job->images = NULL;
+		job->images = dlist_init (job_image_delete, NULL);
 	}
 
 	return job;
@@ -142,7 +142,14 @@ void *jeeves_job_new (void) {
 
 void jeeves_job_delete (void *job_ptr) {
 
-	if (job_ptr) free (job_ptr);
+	if (job_ptr) {
+		JeevesJob *job = (JeevesJob *) job_ptr;
+
+		dlist_delete (job->images);
+		job->images = NULL;
+
+		free (job_ptr);
+	}
 
 }
 
@@ -162,6 +169,68 @@ void jeeves_job_print (JeevesJob *job) {
 		(void) printf ("started: %s GMT\n", buffer);
 		(void) strftime (buffer, 128, "%d/%m/%y - %T", gmtime (&job->ended));
 		(void) printf ("ended: %s GMT\n", buffer);
+	}
+
+}
+
+
+void jeeves_job_doc_parse_images (JeevesJob *job, bson_iter_t *iter) {
+
+	const u8 *data = NULL;
+	u32 len = 0;
+	bson_iter_array (iter, &len, &data);
+
+	bson_t *images_array = bson_new_from_data (data, len);
+	bson_iter_t array_iter = { 0 };
+	if (bson_iter_init (&array_iter, images_array)) {
+		while (bson_iter_next (&array_iter)) {
+			// const char *key = bson_iter_key (&array_iter);
+			const bson_value_t *value = bson_iter_value (&array_iter);
+
+			const u8 *data = value->value.v_doc.data;
+			u32 len = value->value.v_doc.data_len;
+
+			bson_t *image_doc = bson_new_from_data (data, len);
+			if (image_doc) {
+				bson_iter_t at_iter = { 0 };
+				if (bson_iter_init (&at_iter, image_doc)) {
+					JobImage *job_image = job_image_new ();
+					while (bson_iter_next (&at_iter)) {
+						const char *key = bson_iter_key (&at_iter);
+						const bson_value_t *value = bson_iter_value (&at_iter);
+
+						if (!strcmp (key, "_id")) {
+							// printf ("%d\n", value->value.v_int32);
+							job_image->id = value->value.v_int32;
+						}
+
+						else if (!strcmp (key, "original")) {
+							// printf ("%s\n", value->value.v_utf8.str);
+							(void) strncpy (
+								job_image->original,
+								value->value.v_utf8.str,
+								JOB_IMAGE_ORIGINAL_LEN
+							);
+						}
+
+						else if (!strcmp (key, "result")) {
+							// printf ("%s\n", value->value.v_utf8.str);
+							(void) strncpy (
+								job_image->result,
+								value->value.v_utf8.str,
+								JOB_IMAGE_RESULT_LEN
+							);
+						}
+					}
+
+					(void) dlist_insert_at_end_unsafe (
+						job->images, job_image
+					);
+				}
+
+				bson_destroy (image_doc);
+			}
+		}
 	}
 
 }
@@ -200,6 +269,10 @@ static void jeeves_job_doc_parse (
 
 			else if (!strcmp (key, "imagesCount"))
 				job->n_images = value->value.v_int32;
+
+			else if (!strcmp (key, "images")) {
+				jeeves_job_doc_parse_images (job, &iter);
+			}
 
 			else if (!strcmp (key, "created")) 
 				job->created = (time_t) bson_iter_date_time (&iter) / 1000;
@@ -520,6 +593,15 @@ bson_t *jeeves_job_end_update_bson (void) {
 	}
 
 	return doc;
+
+}
+
+int jeeves_job_update_one (bson_t *query, bson_t *update) {
+
+	return mongo_update_one (
+		jobs_collection,
+		query, update
+	);
 
 }
 
