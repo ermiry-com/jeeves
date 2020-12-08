@@ -6,6 +6,8 @@
 #define JEEVES_UPLOADS_TEMP_DIR			"/var/uploads"
 #define JEEVES_UPLOADS_DIR				"/home/jeeves/uploads"
 
+#define JEEVES_UPLOADS_PATH				"/api/uploads"
+
 struct _Cerver;
 struct _HttpResponse;
 
