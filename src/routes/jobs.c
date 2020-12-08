@@ -443,18 +443,33 @@ static void jeeves_job_upload_handler_internal (
 	if (filenames) {		
 		// create jobs images
 		const char *filename = NULL;
-		// JobImage *job_image = NULL;
+		JobImage *job_image = NULL;
 		int image_id = !job->n_images ? 0 : job->n_images - 1;
 		DoubleList *images = dlist_init (job_image_delete, NULL);
+		char *end = NULL;
 		for (ListElement *le = dlist_start (filenames); le; le = le->next) {
 			filename = (const char *) le->data;
 
+			job_image = job_image_create (
+				image_id,
+				filename,
+				NULL, "null"
+			);
+
+			end = strstr (filename, JEEVES_UPLOADS_TEMP_DIR);
+			if (end) {
+				(void) snprintf (
+					job_image->original, JOB_IMAGE_ORIGINAL_LEN,
+					"%s/%s%s",
+					JEEVES_UPLOADS_PATH,
+					user_id,
+					end + strlen (JEEVES_UPLOADS_TEMP_DIR)
+				);
+			}
+
 			(void) dlist_insert_at_end_unsafe (
 				images,
-				job_image_create (
-					image_id,
-					filename, "null"
-				)
+				job_image
 			);
 
 			image_id += 1;

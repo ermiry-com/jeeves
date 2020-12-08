@@ -14,6 +14,7 @@
 #define JOB_NAME_LEN					512
 #define JOB_DESCRIPTION_LEN				1024
 
+#define JOB_IMAGE_SAVED_LEN				512
 #define JOB_IMAGE_ORIGINAL_LEN			512
 #define JOB_IMAGE_RESULT_LEN			512
 
@@ -65,6 +66,7 @@ extern JobType job_type_from_string (const char *type_string);
 typedef struct JobImage {
 
 	int id;
+	char saved[JOB_IMAGE_SAVED_LEN];
 	char original[JOB_IMAGE_ORIGINAL_LEN];
 	char result[JOB_IMAGE_RESULT_LEN];
 
@@ -76,7 +78,9 @@ extern void job_image_delete (void *job_image_ptr);
 
 extern JobImage *job_image_create (
 	const int image_id,
-	const char *original, const char *result
+	const char *saved,
+	const char *original,
+	const char *result
 );
 
 extern bson_t *job_image_to_bson (JobImage *job_image);

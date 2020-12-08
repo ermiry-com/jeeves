@@ -96,14 +96,17 @@ void job_image_delete (void *job_image_ptr) {
 
 JobImage *job_image_create (
 	const int image_id,
-	const char *original, const char *result
+	const char *saved,
+	const char *original,
+	const char *result
 ) {
 
 	JobImage *job_image = job_image_new ();
 	if (job_image) {
 		job_image->id = image_id;
-		(void) strncpy (job_image->original, original, JOB_IMAGE_ORIGINAL_LEN);
-		(void) strncpy (job_image->result, result, JOB_IMAGE_RESULT_LEN);
+		if (saved) (void) strncpy (job_image->saved, saved, JOB_IMAGE_SAVED_LEN);
+		if (original) (void) strncpy (job_image->original, original, JOB_IMAGE_ORIGINAL_LEN);
+		if (result) (void) strncpy (job_image->result, result, JOB_IMAGE_RESULT_LEN);
 	}
 
 	return job_image;
