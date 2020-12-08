@@ -19,6 +19,8 @@
 #include <cerver/utils/utils.h>
 #include <cerver/utils/log.h>
 
+#include <osiris/image.h>
+
 #include "jeeves.h"
 #include "worker.h"
 
@@ -106,6 +108,109 @@ bool jeeves_jobs_worker_check (const bson_oid_t *job_oid) {
 
 }
 
+static char *jeeves_jobs_worker_thread_get_file_extension (
+	const char *filename, size_t *ext_len
+) {
+
+	char *ptr = strrchr ((char *) filename, '.');
+	if (ptr) {
+		char *p = ptr;
+		while (*p++) *ext_len += 1;
+	}
+
+	return ptr;
+
+}
+
+static void jeeves_jobs_worker_thread_gray (
+	JeevesJob *job,
+	JobImage *job_image,
+	const char *filename
+) {
+
+	cerver_log_debug ("%s...", job_type_to_string (job->type));
+
+	Image *input = image_load_color (filename, 0, 0);
+	if (input) {
+		Image *gray = image_grayscale (input);
+		if (gray) {
+			if (!image_save (gray, job_image->result)) {
+				(void) printf ("Done!\n\n");
+			}
+
+			image_delete (gray);
+		}
+
+		image_delete (input);
+	}
+
+}
+
+static void jeeves_jobs_worker_thread_shift (
+	JeevesJob *job,
+	JobImage *job_image,
+	const char *filename
+) {
+
+	cerver_log_debug ("%s...", job_type_to_string (job->type));
+
+	Image *input = image_load_color (filename, 0, 0);
+	if (input) {
+		image_shift (input, 0, .4);
+		image_shift (input, 1, .4);
+		image_shift (input, 2, .4);
+
+		if (!image_save (input, job_image->result)) {
+			(void) printf ("Done!\n\n");
+		}
+
+		image_delete (input);
+	}
+
+}
+
+static void jeeves_jobs_worker_thread_clamp (
+	JeevesJob *job,
+	JobImage *job_image,
+	const char *filename
+) {
+
+	cerver_log_debug ("%s...", job_type_to_string (job->type));
+
+	Image *input = image_load_color (filename, 0, 0);
+	if (input) {
+		image_clamp (input);
+
+		if (!image_save (input, job_image->result)) {
+			(void) printf ("Done!\n\n");
+		}
+
+		image_delete (input);
+	}
+
+}
+
+static void jeeves_jobs_worker_thread_rgb_to_hue (
+	JeevesJob *job,
+	JobImage *job_image,
+	const char *filename
+) {
+
+	cerver_log_debug ("%s...", job_type_to_string (job->type));
+
+	Image *input = image_load_color (filename, 0, 0);
+	if (input) {
+		image_rgb_to_hsv (input);
+
+		if (!image_save (input, job_image->result)) {
+			(void) printf ("Done!\n\n");
+		}
+
+		image_delete (input);
+	}
+
+}
+
 void *jeeves_jobs_worker_thread (void *worker_job_ptr) {
 
 	if (worker_job_ptr) {
@@ -117,33 +222,99 @@ void *jeeves_jobs_worker_thread (void *worker_job_ptr) {
 		);
 
 		// process images
+		char filename[1024] = { 0 };
+		char *end = NULL;
+		// char *ext = NULL;
+		size_t name_len = 0;
+		size_t ext_len = 0;
+
+		// Image *input = NULL;
+
 		ListElement *le = NULL;
 		JobImage *job_image = NULL;
 		dlist_for_each (worker_job->job->images, le) {
 			job_image = (JobImage *) le->data;
 
+			(void) memset (filename, 0, 1024);
+			ext_len = 0;
+
 			cerver_log_debug ("Next to process: %s", job_image->original);
 
+			// generate actual image path
+			end = strstr (job_image->original, JEEVES_UPLOADS_PATH);
+			if (end) {
+				printf ("end: %s\n", end);
+
+				(void) snprintf (
+					filename, 1024,
+					"%s%s",
+					JEEVES_UPLOADS_DIR,
+					end + strlen (JEEVES_UPLOADS_PATH)
+				);
+			}
+
+			printf ("filename: %s\n", filename);
+
+			// generate output image filename
+			(void) jeeves_jobs_worker_thread_get_file_extension (
+				job_image->original, &ext_len
+			);
+
+			name_len = strlen (end) - strlen (JEEVES_UPLOADS_PATH) - ext_len;
+
+			(void) snprintf (
+				job_image->result, JOB_IMAGE_RESULT_LEN,
+				"%s%.*s-out.jpg",
+				JEEVES_UPLOADS_DIR,
+				(int) name_len, end + strlen (JEEVES_UPLOADS_PATH)
+			);
+
+			// printf ("out: %s\n", job_image->result);
+
 			switch (worker_job->job->type) {
-				case JOB_TYPE_GRAYSCALE:
-					cerver_log_debug ("%s...", job_type_to_string (worker_job->job->type));
-					break;
-				case JOB_TYPE_SHIFT:
-					cerver_log_debug ("%s...", job_type_to_string (worker_job->job->type));
-					break;
-				case JOB_TYPE_CLAMP:
-					cerver_log_debug ("%s...", job_type_to_string (worker_job->job->type));
-					break;
-				case JOB_TYPE_RGB_TO_HUE:
-					cerver_log_debug ("%s...", job_type_to_string (worker_job->job->type));
-					break;
+				case JOB_TYPE_GRAYSCALE: {
+					jeeves_jobs_worker_thread_gray (
+						worker_job->job,
+						job_image,
+						filename
+					);
+				} break;
+
+				case JOB_TYPE_SHIFT: {
+					jeeves_jobs_worker_thread_shift (
+						worker_job->job,
+						job_image,
+						filename
+					);
+				} break;
+
+				case JOB_TYPE_CLAMP: {
+					jeeves_jobs_worker_thread_clamp (
+						worker_job->job,
+						job_image,
+						filename
+					);
+				} break;
+
+				case JOB_TYPE_RGB_TO_HUE: {
+					jeeves_jobs_worker_thread_rgb_to_hue (
+						worker_job->job,
+						job_image,
+						filename
+					);
+				} break;
 
 				default: break;
 			}
 
-			(void) sleep (10);
+			(void) sleep (4);
 
-			// TODO: save result images
+			// update image in the db!
+			// printf ("%d - %s\n", job_image->id, job_image->result);
+			(void) jeeves_job_update_one (
+				jeeves_job_image_query (&worker_job->job->oid, job_image->id),
+				jeeves_job_image_result_update (job_image->result)
+			);
 
 			cerver_log_success ("Done with: %s", job_image->original);
 		}
@@ -217,7 +388,7 @@ JeevesUpload *jeeves_upload_new (const char *dirname, const char *user_id) {
 }
 
 void jeeves_upload_delete (void *jeeves_upload_ptr) {
-	
+
 	if (jeeves_upload_ptr) free (jeeves_upload_ptr);
 
 }
@@ -280,7 +451,7 @@ static void *jeeves_uploads_worker_thread (void *null_ptr) {
 	char command[2048] = { 0 };
 	while (jeeves_cerver->isRunning) {
 		bsem_wait (jeeves_uploads_worker_job_queue->has_jobs);
-		
+
 		// we are safe to analyze the frames & generate embeddings
 		job = job_queue_pull (jeeves_uploads_worker_job_queue);
 		if (job) {
@@ -322,7 +493,7 @@ static void *jeeves_uploads_worker_thread (void *null_ptr) {
 			(void) printf ("COMMAND: %s\n", command);
 
 			(void) system (command);
-			
+
 			jeeves_upload_delete (upload);
 
 			job_delete (job);
@@ -352,7 +523,7 @@ unsigned int jeeves_worker_init (void) {
 }
 
 unsigned int jeeves_worker_end (void) {
-	
+
 	unsigned int errors = 0;
 
 	errors |= jeeves_jobs_worker_end ();
