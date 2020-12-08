@@ -4,7 +4,7 @@
 #include <stdbool.h>
 
 #define JEEVES_UPLOADS_TEMP_DIR			"/var/uploads"
-#define JEEVES_UPLOADS_DIR				"/home/face/uploads"
+#define JEEVES_UPLOADS_DIR				"/home/jeeves/uploads"
 
 struct _Cerver;
 struct _HttpResponse;
