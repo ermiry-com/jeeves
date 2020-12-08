@@ -111,11 +111,57 @@ void *jeeves_jobs_worker_thread (void *worker_job_ptr) {
 	if (worker_job_ptr) {
 		WorkerJob *worker_job = (WorkerJob *) worker_job_ptr;
 
-		// TODO: process images
+		cerver_log_success (
+			"Job %s worker thread has started!",
+			worker_job->job->id
+		);
 
-		// TODO: update job's status in the db
+		// process images
+		ListElement *le = NULL;
+		JobImage *job_image = NULL;
+		dlist_for_each (worker_job->job->images, le) {
+			job_image = (JobImage *) le->data;
 
-		// TODO: delete worker job
+			cerver_log_debug ("Next to process: %s", job_image->original);
+
+			switch (worker_job->job->type) {
+				case JOB_TYPE_GRAYSCALE:
+					cerver_log_debug ("%s...", job_type_to_string (worker_job->job->type));
+					break;
+				case JOB_TYPE_SHIFT:
+					cerver_log_debug ("%s...", job_type_to_string (worker_job->job->type));
+					break;
+				case JOB_TYPE_CLAMP:
+					cerver_log_debug ("%s...", job_type_to_string (worker_job->job->type));
+					break;
+				case JOB_TYPE_RGB_TO_HUE:
+					cerver_log_debug ("%s...", job_type_to_string (worker_job->job->type));
+					break;
+
+				default: break;
+			}
+
+			(void) sleep (10);
+
+			// TODO: save result images
+
+			cerver_log_success ("Done with: %s", job_image->original);
+		}
+
+		// we are done! - update job's status in the db
+		(void) jeeves_job_update_one (
+			jeeves_job_query_oid (&worker_job->job->oid),
+			jeeves_job_end_update_bson ()
+		);
+
+		// free allocated resources
+		(void) dlist_remove (active_jobs, worker_job, NULL);
+		worker_job_delete (worker_job);
+
+		cerver_log_success (
+			"Job %s worker thread has ended!",
+			worker_job->job->id
+		);
 	}
 
 	return NULL;
