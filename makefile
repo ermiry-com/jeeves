@@ -12,6 +12,8 @@ CMONGO_INC	:= -I /usr/local/include/libbson-1.0 -I /usr/local/include/libmongoc-
 CERVER		:= -l cerver
 CERVER_INC	:= -I /usr/local/include/cerver
 
+OSIRIS		:= -l osiris
+
 DEVELOPMENT	:= -g -D JEEVES_DEBUG
 
 CC          := gcc
@@ -26,7 +28,7 @@ DEPEXT      := d
 OBJEXT      := o
 
 CFLAGS      := $(DEVELOPMENT) -Wall -Wno-unknown-pragmas
-LIB         := -L /usr/local/lib $(PTHREAD) $(MATH) $(OPENSSL) $(CMONGO) $(CERVER)
+LIB         := -L /usr/local/lib $(PTHREAD) $(MATH) $(OPENSSL) $(CMONGO) $(CERVER) $(OSIRIS)
 INC         := -I $(INCDIR) -I /usr/local/include $(CMONGO_INC) $(CERVER_INC)
 INCDEP      := -I $(INCDIR)
 
