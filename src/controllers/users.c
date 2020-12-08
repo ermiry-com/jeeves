@@ -241,7 +241,7 @@ void *jeeves_user_parse_from_json (void *user_json_ptr) {
 			(void) strncpy (user->role, role, USER_ROLE_LEN);
 			(void) strncpy (user->username, username, USER_USERNAME_LEN);
 
-			user_print (user);
+			// user_print (user);
 		}
 
 		else {
