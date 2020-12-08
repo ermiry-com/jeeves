@@ -117,16 +117,16 @@ bson_t *job_image_to_bson (JobImage *job_image) {
 
 	bson_t *doc = NULL;
 
-    if (job_image) {
-        doc = bson_new ();
-        if (doc) {
+	if (job_image) {
+		doc = bson_new ();
+		if (doc) {
 			(void) bson_append_int32 (doc, "_id", -1, job_image->id);
 			(void) bson_append_utf8 (doc, "original", -1, job_image->original, -1);
 			(void) bson_append_utf8 (doc, "result", -1, job_image->result, -1);
-        }
-    }
+		}
+	}
 
-    return doc;
+	return doc;
 
 }
 
@@ -258,10 +258,10 @@ static void jeeves_job_doc_parse (
 			else if (!strcmp (key, "user"))
 				bson_oid_copy (&value->value.v_oid, &job->user_oid);
 
-			else if (!strcmp (key, "name") && value->value.v_utf8.str) 
+			else if (!strcmp (key, "name") && value->value.v_utf8.str)
 				(void) strncpy (job->name, value->value.v_utf8.str, JOB_NAME_LEN);
 
-			else if (!strcmp (key, "description") && value->value.v_utf8.str) 
+			else if (!strcmp (key, "description") && value->value.v_utf8.str)
 				(void) strncpy (job->description, value->value.v_utf8.str, JOB_DESCRIPTION_LEN);
 
 			else if (!strcmp (key, "status"))
@@ -277,13 +277,13 @@ static void jeeves_job_doc_parse (
 				jeeves_job_doc_parse_images (job, &iter);
 			}
 
-			else if (!strcmp (key, "created")) 
+			else if (!strcmp (key, "created"))
 				job->created = (time_t) bson_iter_date_time (&iter) / 1000;
 
-			else if (!strcmp (key, "started")) 
+			else if (!strcmp (key, "started"))
 				job->started = (time_t) bson_iter_date_time (&iter) / 1000;
 
-			else if (!strcmp (key, "ended")) 
+			else if (!strcmp (key, "ended"))
 				job->ended = (time_t) bson_iter_date_time (&iter) / 1000;
 		}
 	}
@@ -310,7 +310,7 @@ bson_t *jeeves_job_query_oid_and_user (
 ) {
 
 	bson_t *job_query = NULL;
-	
+
 	if (oid && user_oid) {
 		job_query = bson_new ();
 		if (job_query) {
@@ -368,10 +368,10 @@ bson_t *jeeves_job_to_bson (JeevesJob *job) {
 
 	bson_t *doc = NULL;
 
-    if (job) {
-        doc = bson_new ();
-        if (doc) {
-            (void) bson_append_oid (doc, "_id", -1, &job->oid);
+	if (job) {
+		doc = bson_new ();
+		if (doc) {
+			(void) bson_append_oid (doc, "_id", -1, &job->oid);
 
 			(void) bson_append_oid (doc, "user", -1, &job->user_oid);
 
@@ -387,10 +387,10 @@ bson_t *jeeves_job_to_bson (JeevesJob *job) {
 			(void) bson_append_date_time (doc, "created", -1, job->created * 1000);
 			(void) bson_append_date_time (doc, "started", -1, job->started * 1000);
 			(void) bson_append_date_time (doc, "ended", -1, job->ended * 1000);
-        }
-    }
+		}
+	}
 
-    return doc;
+	return doc;
 
 }
 
@@ -398,9 +398,9 @@ bson_t *jeeves_job_update_bson (JeevesJob *job) {
 
 	bson_t *doc = NULL;
 
-    if (job) {
-        doc = bson_new ();
-        if (doc) {
+	if (job) {
+		doc = bson_new ();
+		if (doc) {
 			bson_t set_doc = { 0 };
 			(void) bson_append_document_begin (doc, "$set", -1, &set_doc);
 
@@ -408,10 +408,10 @@ bson_t *jeeves_job_update_bson (JeevesJob *job) {
 			(void) bson_append_utf8 (&set_doc, "description", -1, job->description, -1);
 
 			(void) bson_append_document_end (doc, &set_doc);
-        }
-    }
+		}
+	}
 
-    return doc;
+	return doc;
 
 }
 
@@ -419,19 +419,19 @@ bson_t *jeeves_job_config_update_bson (JeevesJob *job) {
 
 	bson_t *doc = NULL;
 
-    if (job) {
-        doc = bson_new ();
-        if (doc) {
+	if (job) {
+		doc = bson_new ();
+		if (doc) {
 			bson_t set_doc = { 0 };
 			(void) bson_append_document_begin (doc, "$set", -1, &set_doc);
 
 			(void) bson_append_int32 (&set_doc, "type", -1, job->type);
 
 			(void) bson_append_document_end (doc, &set_doc);
-        }
-    }
+		}
+	}
 
-    return doc;
+	return doc;
 
 }
 
@@ -508,7 +508,7 @@ static void jeeves_job_images_add_push_images_bson (
 				}
 
 				(void) bson_append_array_end (images_doc, each_array);
-				
+
 				bson_destroy (each_array);
 			}
 
@@ -516,7 +516,7 @@ static void jeeves_job_images_add_push_images_bson (
 
 			bson_destroy (images_doc);
 		}
-		
+
 		(void) bson_append_document (doc, "$push", -1, push_doc);
 
 		bson_destroy (push_doc);
@@ -554,6 +554,43 @@ bson_t *jeeves_job_images_add_bson (
 
 }
 
+bson_t *jeeves_job_image_query (
+	bson_oid_t *oid, int image_id
+) {
+
+	bson_t *doc = NULL;
+
+	if (oid) {
+		doc = bson_new ();
+		if (doc) {
+			(void) bson_append_oid (doc, "_id", -1, oid);
+			(void) bson_append_int32 (doc, "images._id", -1, image_id);
+		}
+	}
+
+	return doc;
+
+}
+
+bson_t *jeeves_job_image_result_update (
+	const char *result
+) {
+
+	bson_t *doc = bson_new ();
+
+	if (doc) {
+		bson_t set_doc = { 0 };
+		(void) bson_append_document_begin (doc, "$set", -1, &set_doc);
+
+		(void) bson_append_utf8 (&set_doc, "images.$.result", -1, result, -1);
+
+		(void) bson_append_document_end (doc, &set_doc);
+	}
+
+	return doc;
+
+}
+
 bson_t *jeeves_job_start_update_bson (void) {
 
 	bson_t *doc = bson_new ();
@@ -570,7 +607,7 @@ bson_t *jeeves_job_start_update_bson (void) {
 }
 
 bson_t *jeeves_job_stop_update_bson (void) {
-	
+
 	bson_t *doc = bson_new ();
 	if (doc) {
 		bson_t set_doc = { 0 };
@@ -585,7 +622,7 @@ bson_t *jeeves_job_stop_update_bson (void) {
 }
 
 bson_t *jeeves_job_end_update_bson (void) {
-	
+
 	bson_t *doc = bson_new ();
 	if (doc) {
 		bson_t set_doc = { 0 };

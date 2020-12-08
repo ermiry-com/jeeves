@@ -144,6 +144,14 @@ extern bson_t *jeeves_job_type_update_bson (JobType type);
 
 extern bson_t *jeeves_job_images_add_bson (DoubleList *images);
 
+extern bson_t *jeeves_job_image_query (
+	bson_oid_t *oid, int image_id
+);
+
+extern bson_t *jeeves_job_image_result_update (
+	const char *result
+);
+
 extern bson_t *jeeves_job_start_update_bson (void);
 
 extern bson_t *jeeves_job_stop_update_bson (void);
