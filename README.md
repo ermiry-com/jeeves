@@ -8,6 +8,7 @@ sudo docker run \
   -p 5000:5000 --net jeeves \
   --mount type=tmpfs,destination=/var/uploads,tmpfs-size=256m \
   -v /home/ermiry/Documents/ermiry/Projects/jeeves-web/jeeves:/home/jeeves \
+  -v /home/ermiry/Documents/ermiry/Projects/jeeves-web/uploads:/home/jeeves/uploads \
   -e CURR_ENV=development \
   -e PORT=5000 \
   -e PRIV_KEY=/home/jeeves/keys/key.key -e PUB_KEY=/home/jeeves/keys/key.pub \
@@ -17,6 +18,26 @@ sudo docker run \
   -e CERVER_CONNECTION_QUEUE=4 \
   -e ENABLE_USERS_ROUTES=TRUE \
   ermiry/jeeves:development /bin/bash
+```
+
+### Demo
+```
+sudo docker run \
+  -it \
+  --name api --rm \
+  -p 5000:5000 --net jeeves \
+  --mount type=tmpfs,destination=/var/uploads,tmpfs-size=256m \
+  -v /home/ermiry/Documents/ermiry/Projects/jeeves-web/jeeves:/home/jeeves \
+  -v /home/ermiry/Documents/ermiry/Projects/jeeves-web/uploads:/home/jeeves/uploads \
+  -e CURR_ENV=demo \
+  -e PORT=5000 \
+  -e PRIV_KEY=/home/jeeves/keys/key.key -e PUB_KEY=/home/jeeves/keys/key.pub \
+  -e MONGO_APP_NAME=jeeves -e MONGO_DB=ermiry \
+  -e MONGO_URI=mongodb://jeeves:password@192.168.100.39:27017/ermiry \
+  -e CERVER_RECEIVE_BUFFER_SIZE=4096 -e CERVER_TH_THREADS=4 \
+  -e CERVER_CONNECTION_QUEUE=4 \
+  -e ENABLE_USERS_ROUTES=TRUE \
+  ermiry/jeeves:demo /bin/bash
 ```
 
 ## Routes
