@@ -4,6 +4,7 @@
 
 #include <cerver/types/string.h>
 
+#include <cerver/collections/dlist.h>
 #include <cerver/collections/pool.h>
 
 #include <cerver/utils/utils.h>
@@ -111,11 +112,20 @@ JeevesJob *jeeves_job_get_by_id_and_user (
 
 }
 
-void jeeves_job_return (void *jobs_ptr) {
+void jeeves_job_return (void *job_ptr) {
 
-	if (jobs_ptr) {
-		(void) memset (jobs_ptr, 0, sizeof (JeevesJob));
-		(void) pool_push (jobs_pool, jobs_ptr);
+	if (job_ptr) {
+		JeevesJob *job = (JeevesJob *) job_ptr;
+
+		dlist_reset (job->images);
+
+		DoubleList *temp = job->images;
+
+		(void) memset (job, 0, sizeof (JeevesJob));
+
+		job->images = temp;
+		
+		(void) pool_push (jobs_pool, job_ptr);
 	}
 
 }
