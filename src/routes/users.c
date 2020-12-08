@@ -14,6 +14,7 @@
 #include <cerver/utils/utils.h>
 #include <cerver/utils/log.h>
 
+#include "errors.h"
 #include "jeeves.h"
 #include "mongo.h"
 
@@ -161,6 +162,71 @@ void users_register_handler (
 
 }
 
+static void users_login_handler_parse_json (
+	json_t *json_body,
+	char *email, char *password
+) {
+
+	// get values from json to create a new transaction
+	const char *key = NULL;
+	json_t *value = NULL;
+	if (json_typeof (json_body) == JSON_OBJECT) {
+		json_object_foreach (json_body, key, value) {
+			if (!strcmp (key, "email")) {
+				(void) strncpy (email, json_string_value (value), USER_EMAIL_LEN);
+				// (void) printf ("email: \"%s\"\n", *email);
+			}
+
+			else if (!strcmp (key, "password")) {
+				(void) strncpy (password, json_string_value (value), USER_PASSWORD_LEN);
+				// (void) printf ("password: \"%s\"\n", *password);
+			}
+		}
+	}
+
+}
+
+static JeevesError users_login_handler_internal (
+	const String *request_body,
+	char *email, char *password
+) {
+
+	JeevesError error = JEEVES_ERROR_NONE;
+
+	if (request_body) {
+		json_error_t json_error =  { 0 };
+		json_t *json_body = json_loads (request_body->str, 0, &json_error);
+		if (json_body) {
+			users_login_handler_parse_json (
+				json_body,
+				email, password
+			);
+
+			if (!strlen (email) || !strlen (password)) {
+				#ifdef JEEVES_DEBUG
+				cerver_log_warning ("Missing user values!");
+				#endif
+				
+				error = JEEVES_ERROR_MISSING_VALUES;
+			}
+
+			json_decref (json_body);
+		}
+
+		else {
+			cerver_log_error (
+				"json_loads () - json error on line %d: %s\n", 
+				json_error.line, json_error.text
+			);
+
+			error = JEEVES_ERROR_BAD_REQUEST;
+		}
+	}
+
+	return error;
+
+}
+
 // POST /api/users/login
 void users_login_handler (
 	const HttpReceive *http_receive,
@@ -169,10 +235,18 @@ void users_login_handler (
 
 	// get the user values from the request
 	// const String *username = http_request_body_get_value (request, "username");
-	const String *email = http_request_body_get_value (request, "email");
-	const String *password = http_request_body_get_value (request, "password");
+	// const String *email = http_request_body_get_value (request, "email");
+	// const String *password = http_request_body_get_value (request, "password");
 
-	if (email && password) {
+	char email[USER_EMAIL_LEN] = { 0 };
+	char password[USER_PASSWORD_LEN] = { 0 };
+
+	JeevesError error = users_login_handler_internal (
+		request->body,
+		email, password
+	);
+
+	if (error == JEEVES_ERROR_NONE) {
 		User *user = jeeves_user_get_by_email (email);
 		if (user) {
 			#ifdef JEEVES_DEBUG
@@ -180,7 +254,7 @@ void users_login_handler (
 			bson_oid_to_string (&user->oid, oid_buffer);
 			#endif
 
-			if (!strcmp (user->password, password->str)) {
+			if (!strcmp (user->password, password)) {
 				#ifdef JEEVES_DEBUG
 				cerver_log_success ("User %s login -> success", oid_buffer);
 				#endif
@@ -212,10 +286,7 @@ void users_login_handler (
 	}
 
 	else {
-		#ifdef JEEVES_DEBUG
-		cerver_log_warning ("Missing user values!");
-		#endif
-		(void) http_response_send (missing_user_values, http_receive);
+		jeeves_error_send_response (error, http_receive);
 	}
 
 }
