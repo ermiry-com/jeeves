@@ -243,7 +243,7 @@ void *jeeves_jobs_worker_thread (void *worker_job_ptr) {
 			// generate actual image path
 			end = strstr (job_image->original, JEEVES_UPLOADS_PATH);
 			if (end) {
-				printf ("end: %s\n", end);
+				// printf ("end: %s\n", end);
 
 				(void) snprintf (
 					filename, 1024,
@@ -253,7 +253,7 @@ void *jeeves_jobs_worker_thread (void *worker_job_ptr) {
 				);
 			}
 
-			printf ("filename: %s\n", filename);
+			// printf ("filename: %s\n", filename);
 
 			// generate output image filename
 			(void) jeeves_jobs_worker_thread_get_file_extension (
@@ -309,11 +309,24 @@ void *jeeves_jobs_worker_thread (void *worker_job_ptr) {
 
 			(void) sleep (4);
 
+			// generate new save image
+			(void) memset (filename, 0, 1024);
+			end = strstr (job_image->result, JEEVES_UPLOADS_DIR);
+			if (end) {
+				// printf ("end: %s\n", end);
+
+				(void) snprintf (
+					filename, 1024,
+					"%s%s",
+					JEEVES_UPLOADS_PATH,
+					end + strlen (JEEVES_UPLOADS_DIR)
+				);
+			}
+
 			// update image in the db!
-			// printf ("%d - %s\n", job_image->id, job_image->result);
 			(void) jeeves_job_update_one (
 				jeeves_job_image_query (&worker_job->job->oid, job_image->id),
-				jeeves_job_image_result_update (job_image->result)
+				jeeves_job_image_result_update (filename)
 			);
 
 			cerver_log_success ("Done with: %s", job_image->original);
