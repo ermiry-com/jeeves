@@ -198,6 +198,9 @@ static void jeeves_job_doc_parse (
 			else if (!strcmp (key, "type"))
 				job->type = (JobType) value->value.v_int32;
 
+			else if (!strcmp (key, "imagesCount"))
+				job->n_images = value->value.v_int32;
+
 			else if (!strcmp (key, "created")) 
 				job->created = (time_t) bson_iter_date_time (&iter) / 1000;
 
@@ -303,6 +306,8 @@ bson_t *jeeves_job_to_bson (JeevesJob *job) {
 
 			(void) bson_append_int32 (doc, "type", -1, job->type);
 
+			(void) bson_append_int32 (doc, "imagesCount", -1, job->n_images);
+
 			(void) bson_append_date_time (doc, "created", -1, job->created * 1000);
 			(void) bson_append_date_time (doc, "started", -1, job->started * 1000);
 			(void) bson_append_date_time (doc, "ended", -1, job->ended * 1000);
@@ -382,8 +387,23 @@ bson_t *jeeves_job_type_update_bson (JobType type) {
 
 }
 
-static void jeeves_job_images_push_update_bson_internal (
-	DoubleList *images, bson_t *doc
+static void jeeves_job_images_add_update_count_bson (
+	bson_t *doc, int images_size
+) {
+
+	bson_t *inc_doc = bson_new ();
+	if (inc_doc) {
+		(void) bson_append_int32 (inc_doc, "imagesCount", -1, images_size);
+
+		(void) bson_append_document (doc, "$inc", -1, inc_doc);
+
+		bson_destroy (inc_doc);
+	}
+
+}
+
+static void jeeves_job_images_add_push_images_bson (
+	bson_t *doc, DoubleList *images
 ) {
 
 	bson_t *push_doc = bson_new ();
@@ -392,30 +412,32 @@ static void jeeves_job_images_push_update_bson_internal (
 		if (images_doc) {
 			bson_t *each_array = bson_new ();
 			if (each_array) {
+				(void) bson_append_array_begin (images_doc, "$each", -1, each_array);
+
 				char buf[16] = { 0 };
 				const char *key = NULL;
 				size_t keylen = 0;
 				unsigned int i = 0;
-				bson_t *job_bson = NULL;
+				bson_t *job_image_bson = NULL;
 				for (ListElement *le = dlist_start (images); le; le = le->next) {
 					keylen = bson_uint32_to_string (i, &key, buf, sizeof (buf));
 
-					job_bson = job_image_to_bson ((JobImage *) le->data);
-					if (job_bson) {
-						(void) bson_append_document (each_array, key, (int) keylen, job_bson);
-						bson_destroy (job_bson);
+					job_image_bson = job_image_to_bson ((JobImage *) le->data);
+					if (job_image_bson) {
+						(void) bson_append_document (each_array, key, (int) keylen, job_image_bson);
+						bson_destroy (job_image_bson);
 					}
 
 					i++;
 				}
 
-				(void) bson_append_document (push_doc, "$each", -1, each_array);
+				(void) bson_append_array_end (images_doc, each_array);
 				
 				bson_destroy (each_array);
 			}
 
 			(void) bson_append_document (push_doc, "images", -1, images_doc);
-			
+
 			bson_destroy (images_doc);
 		}
 		
@@ -426,16 +448,29 @@ static void jeeves_job_images_push_update_bson_internal (
 
 }
 
-bson_t *jeeves_job_images_push_update_bson (DoubleList *images) {
+bson_t *jeeves_job_images_add_bson (
+	DoubleList *images
+) {
 
 	bson_t *doc = NULL;
 
 	if (images) {
 		doc = bson_new ();
 		if (doc) {
-			jeeves_job_images_push_update_bson_internal (
-				images, doc
+			jeeves_job_images_add_update_count_bson (
+				doc, (int) images->size
 			);
+
+			jeeves_job_images_add_push_images_bson (
+				doc, images
+			);
+
+			size_t json_len = 0;
+			char *json = bson_as_relaxed_extended_json (doc, &json_len);
+			if (json) {
+				printf ("\n\n%s\n\n", json);
+				free (json);
+			}
 		}
 	}
 

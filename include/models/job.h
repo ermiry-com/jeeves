@@ -138,9 +138,7 @@ extern bson_t *jeeves_job_status_update_bson (JobStatus status);
 
 extern bson_t *jeeves_job_type_update_bson (JobType type);
 
-extern bson_t *jeeves_job_images_push_update_bson (
-	DoubleList *images
-);
+extern bson_t *jeeves_job_images_add_bson (DoubleList *images);
 
 extern bson_t *jeeves_job_start_update_bson (void);
 
