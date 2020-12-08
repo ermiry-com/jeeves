@@ -484,6 +484,7 @@ bson_t *jeeves_job_start_update_bson (void) {
 	if (doc) {
 		bson_t set_doc = { 0 };
 		(void) bson_append_document_begin (doc, "$set", -1, &set_doc);
+		(void) bson_append_int32 (&set_doc, "status", -1, JOB_STATUS_RUNNING);
 		(void) bson_append_date_time (&set_doc, "started", -1, time (NULL));
 		(void) bson_append_document_end (doc, &set_doc);
 	}
@@ -498,6 +499,7 @@ bson_t *jeeves_job_stop_update_bson (void) {
 	if (doc) {
 		bson_t set_doc = { 0 };
 		(void) bson_append_document_begin (doc, "$set", -1, &set_doc);
+		(void) bson_append_int32 (&set_doc, "status", -1, JOB_STATUS_STOPPED);
 		(void) bson_append_date_time (&set_doc, "stopped", -1, time (NULL));
 		(void) bson_append_document_end (doc, &set_doc);
 	}
@@ -512,6 +514,7 @@ bson_t *jeeves_job_end_update_bson (void) {
 	if (doc) {
 		bson_t set_doc = { 0 };
 		(void) bson_append_document_begin (doc, "$set", -1, &set_doc);
+		(void) bson_append_int32 (&set_doc, "status", -1, JOB_STATUS_DONE);
 		(void) bson_append_date_time (&set_doc, "ended", -1, time (NULL));
 		(void) bson_append_document_end (doc, &set_doc);
 	}
