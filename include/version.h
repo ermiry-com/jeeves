@@ -1,10 +1,10 @@
 #ifndef _JEEVES_VERSION_H_
 #define _JEEVES_VERSION_H_
 
-#define JEEVES_VERSION                    	"0.1"
-#define JEEVES_VERSION_NAME               	"Version 0.1"
-#define JEEVES_VERSION_DATE			    	"28/11/2020"
-#define JEEVES_VERSION_TIME			    	"12:20 CST"
+#define JEEVES_VERSION                    	"0.2"
+#define JEEVES_VERSION_NAME               	"Version 0.2"
+#define JEEVES_VERSION_DATE			    	"08/12/2020"
+#define JEEVES_VERSION_TIME			    	"18:36 CST"
 #define JEEVES_VERSION_AUTHOR			    "Erick Salas"
 
 // print full jeeves version information
