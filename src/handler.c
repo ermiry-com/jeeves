@@ -9,7 +9,7 @@ unsigned int jeeves_handler_init (void) {
 	unsigned int retval = 1;
 
 	catch_all = http_response_json_key_value (
-		(http_status) 200, "msg", "Barcel Services V2!"
+		(http_status) 200, "msg", "Jeeves Service!"
 	);
 
 	if (catch_all) retval = 0;
@@ -30,6 +30,6 @@ void jeeves_catch_all_handler (
 	const HttpRequest *request
 ) {
 
-	http_response_send (catch_all, http_receive);
+	(void) http_response_send (catch_all, http_receive);
 
 }
