@@ -50,7 +50,7 @@ void jeeves_auth_handler (
 	}
 
 	else {
-		(void) http_response_send (bad_user, http_receive);
+		(void) http_response_send (bad_user_error, http_receive);
 	}
 
 }
