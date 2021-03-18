@@ -20,7 +20,7 @@ unsigned int jeeves_handler_init (void) {
 
 void jeeves_handler_end (void) {
 
-	http_respponse_delete (catch_all);
+	http_response_delete (catch_all);
 
 }
 
