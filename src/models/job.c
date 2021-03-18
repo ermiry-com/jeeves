@@ -321,19 +321,19 @@ bson_t *jeeves_job_query_oid (const bson_oid_t *oid) {
 
 }
 
-bson_t *jeeves_job_query_oid_and_user (
+static bson_t *jeeves_job_query_oid_and_user (
 	const bson_oid_t *oid, const bson_oid_t *user_oid
 ) {
 
 	bson_t *job_query = NULL;
 
-	if (oid && user_oid) {
+	// if (oid && user_oid) {
 		job_query = bson_new ();
 		if (job_query) {
 			(void) bson_append_oid (job_query, "_id", -1, oid);
 			(void) bson_append_oid (job_query, "user", -1, user_oid);
 		}
-	}
+	// }
 
 	return job_query;
 
@@ -348,15 +348,36 @@ u8 jeeves_job_get_by_oid_and_user (
 	u8 retval = 1;
 
 	if (job) {
-		bson_t *job_query = bson_new ();
-		if (job_query) {
-			(void) bson_append_oid (job_query, "_id", -1, oid);
-			(void) bson_append_oid (job_query, "user", -1, user_oid);
+		retval = mongo_find_one_with_opts (
+			jobs_model,
+			jeeves_job_query_oid_and_user (oid, user_oid), query_opts,
+			job
+		);
+	}
 
-			retval = mongo_find_one_with_opts (
+	return retval;
+
+}
+
+u8 jeeves_job_get_by_oid_and_user_to_json (
+	JeevesJob *job,
+	const bson_oid_t *oid, const bson_oid_t *user_oid,
+	const bson_t *query_opts,
+	char **json, size_t *json_len
+) {
+
+	u8 retval = 1;
+
+	if (job) {
+		bson_t *job_query = jeeves_job_query_oid_and_user (
+			oid, user_oid
+		);
+
+		if (job_query) {
+			retval = mongo_find_one_with_opts_to_json (
 				jobs_model,
 				job_query, query_opts,
-				job
+				json, json_len
 			);
 		}
 	}
@@ -541,13 +562,6 @@ bson_t *jeeves_job_images_add_bson (
 			jeeves_job_images_add_push_images_bson (
 				doc, images
 			);
-
-			size_t json_len = 0;
-			char *json = bson_as_relaxed_extended_json (doc, &json_len);
-			if (json) {
-				printf ("\n\n%s\n\n", json);
-				free (json);
-			}
 		}
 	}
 
