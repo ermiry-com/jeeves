@@ -129,7 +129,7 @@ extern u8 jeeves_job_get_by_oid_and_user (
 	const bson_t *query_opts
 );
 
-extern bson_t *jeeves_job_to_bson (JeevesJob *job);
+extern bson_t *jeeves_job_to_bson (const JeevesJob *job);
 
 extern bson_t *jeeves_job_update_bson (JeevesJob *job);
 
@@ -143,6 +143,10 @@ extern bson_t *jeeves_job_images_add_bson (DoubleList *images);
 
 extern bson_t *jeeves_job_image_query (
 	bson_oid_t *oid, int image_id
+);
+
+extern unsigned int jeeves_job_insert_one (
+	const JeevesJob *job
 );
 
 extern bson_t *jeeves_job_image_result_update (

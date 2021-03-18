@@ -365,7 +365,7 @@ u8 jeeves_job_get_by_oid_and_user (
 
 }
 
-bson_t *jeeves_job_to_bson (JeevesJob *job) {
+bson_t *jeeves_job_to_bson (const JeevesJob *job) {
 
 	bson_t *doc = NULL;
 
@@ -573,6 +573,16 @@ bson_t *jeeves_job_image_query (
 
 }
 
+unsigned int jeeves_job_insert_one (
+	const JeevesJob *job
+) {
+
+	return mongo_insert_one (
+		jobs_model, jeeves_job_to_bson (job)
+	);
+
+}
+
 bson_t *jeeves_job_image_result_update (
 	const char *result
 ) {
@@ -637,7 +647,9 @@ bson_t *jeeves_job_end_update_bson (void) {
 
 }
 
-unsigned int jeeves_job_update_one (bson_t *query, bson_t *update) {
+unsigned int jeeves_job_update_one (
+	bson_t *query, bson_t *update
+) {
 
 	return mongo_update_one (
 		jobs_model,
