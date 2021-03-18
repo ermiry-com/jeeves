@@ -3,12 +3,10 @@
 
 #include <time.h>
 
-#include <mongoc/mongoc.h>
 #include <bson/bson.h>
+#include <mongoc/mongoc.h>
 
 #include <cerver/types/types.h>
-
-#include <cerver/collections/dlist.h>
 
 #define USER_ID_LEN				32
 #define USER_EMAIL_LEN			128
@@ -17,12 +15,9 @@
 #define USER_PASSWORD_LEN		128
 #define USER_ROLE_LEN			64
 
-extern mongoc_collection_t *users_collection;
+extern unsigned int users_model_init (void);
 
-// opens handle to user collection
-extern unsigned int users_collection_get (void);
-
-extern void users_collection_close (void);
+extern void users_model_end (void);
 
 typedef struct User {
 
@@ -39,9 +34,6 @@ typedef struct User {
 
 	time_t iat;
 
-	int trans_count;
-	int categories_count;
-
 } User;
 
 extern void *user_new (void);
@@ -54,6 +46,8 @@ extern bson_t *user_query_id (const char *id);
 
 extern bson_t *user_query_email (const char *email);
 
+extern u8 user_check_by_email (const char *email);
+
 extern u8 user_get_by_id (
 	User *user, const char *id, const bson_t *query_opts
 );
@@ -65,9 +59,11 @@ extern u8 user_get_by_email (
 
 // gets a user from the db by its username
 extern u8 user_get_by_username (
-	User *user, const char *username, const bson_t *query_opts
+	User *user, const String *username, const bson_t *query_opts
 );
 
-extern bson_t *user_bson_create (User *user);
+extern bson_t *user_bson_create (const User *user);
+
+extern unsigned int user_insert_one (const User *user);
 
 #endif
