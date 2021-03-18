@@ -339,19 +339,6 @@ bson_t *jeeves_job_query_oid_and_user (
 
 }
 
-const bson_t *jeeves_job_find_by_oid_and_user (
-	const bson_oid_t *oid, const bson_oid_t *user_oid,
-	const bson_t *query_opts
-) {
-
-	const bson_t *retval = NULL;
-
-	
-
-	return retval;
-
-}
-
 u8 jeeves_job_get_by_oid_and_user (
 	JeevesJob *job,
 	const bson_oid_t *oid, const bson_oid_t *user_oid,
@@ -659,25 +646,26 @@ unsigned int jeeves_job_update_one (bson_t *query, bson_t *update) {
 
 }
 
-// get all the jobs that are related to a user
-mongoc_cursor_t *jeeves_jobs_get_all_by_user (
-	const bson_oid_t *user_oid, const bson_t *opts
+char *jeeves_jobs_get_all_by_user_to_json (
+	const bson_oid_t *user_oid, const bson_t *opts,
+	size_t *json_len
 ) {
 
-	mongoc_cursor_t *retval = NULL;
+	char *json = NULL;
 
 	if (user_oid) {
 		bson_t *query = bson_new ();
 		if (query) {
 			(void) bson_append_oid (query, "user", -1, user_oid);
 
-			retval = mongo_find_all_cursor_with_opts (
+			json = mongo_find_all_cursor_with_opts_to_json (
 				jobs_model,
-				query, opts
+				query, opts,
+				"jobs", json_len
 			);
 		}
 	}
 
-	return retval;
+	return json;
 
 }
