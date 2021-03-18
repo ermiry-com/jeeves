@@ -158,10 +158,7 @@ void jeeves_create_job_handler (
 			#endif
 
 			// insert into the db
-			if (!mongo_insert_one (
-				jobs_collection,
-				jeeves_job_to_bson (job)
-			)) {
+			if (!jeeves_job_insert_one (job)) {
 				// return success to user
 				(void) http_response_send (
 					oki_doki,
@@ -210,41 +207,32 @@ void jeeves_job_info_handler (
 
 	User *user = (User *) request->decoded_data;
 	if (user) {
-		bson_oid_init_from_string (&user->oid, user->id);
-
-		bson_oid_t job_oid = { 0 };
-		bson_oid_init_from_string (&job_oid, job_id->str);
-
-		const bson_t *job_bson = jeeves_job_find_by_oid_and_user (
-			&job_oid, &user->oid, NULL	
-		);
-
-		if (job_bson) {
+		if (job_id) {
 			size_t json_len = 0;
-			char *json = bson_as_relaxed_extended_json (
-				job_bson, &json_len
-			);
+			char *json = NULL;
 
-			if (json) {
-				(void) http_response_json_custom_reference_send (
-					http_receive,
-					200,
-					json, json_len
-				);
+			if (!jeeves_job_get_by_id_and_user_to_json (
+				job_id->str, &user->oid,
+				NULL,
+				&json, &json_len
+			)) {
+				if (json) {
+					(void) http_response_json_custom_reference_send (
+						http_receive, 200, json, json_len
+					);
+					
+					free (json);
+				}
 
-				free (json);
+				else {
+					(void) http_response_send (server_error, http_receive);
+				}
 			}
 
 			else {
+				// TODO: change to job not found response
 				(void) http_response_send (server_error, http_receive);
 			}
-			
-			bson_destroy ((bson_t *) job_bson);
-		}
-
-		else {
-			// TODO: change to job not found response
-			(void) http_response_send (server_error, http_receive);
 		}
 	}
 
