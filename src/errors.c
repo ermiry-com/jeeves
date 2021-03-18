@@ -35,7 +35,7 @@ void jeeves_error_send_response (
 			break;
 
 		case JEEVES_ERROR_BAD_USER:
-			(void) http_response_send (bad_user, http_receive);
+			(void) http_response_send (bad_user_error, http_receive);
 			break;
 
 		case JEEVES_ERROR_SERVER_ERROR:
