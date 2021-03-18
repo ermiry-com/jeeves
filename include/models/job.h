@@ -3,8 +3,8 @@
 
 #include <time.h>
 
-#include <mongoc/mongoc.h>
 #include <bson/bson.h>
+#include <mongoc/mongoc.h>
 
 #include <cerver/types/types.h>
 
@@ -18,12 +18,9 @@
 #define JOB_IMAGE_ORIGINAL_LEN			512
 #define JOB_IMAGE_RESULT_LEN			512
 
-extern mongoc_collection_t *jobs_collection;
+extern unsigned int jobs_model_init (void);
 
-// opens handle to jobs collection
-extern unsigned int jobs_collection_get (void);
-
-extern void jobs_collection_close (void);
+extern void jobs_model_end (void);
 
 #define JOB_STATUS_MAP(XX)						\
 	XX(0,	NONE, 			None)				\
@@ -42,7 +39,7 @@ typedef enum JobStatus {
 
 } JobStatus;
 
-extern const char *job_status_to_string (JobStatus status);
+extern const char *job_status_to_string (const JobStatus status);
 
 #define JOB_TYPE_MAP(XX)						\
 	XX(0,	NONE, 			None)				\
@@ -59,7 +56,7 @@ typedef enum JobType {
 
 } JobType;
 
-extern const char *job_type_to_string (JobType type);
+extern const char *job_type_to_string (const JobType type);
 
 extern JobType job_type_from_string (const char *type_string);
 
@@ -158,7 +155,9 @@ extern bson_t *jeeves_job_stop_update_bson (void);
 
 extern bson_t *jeeves_job_end_update_bson (void);
 
-extern int jeeves_job_update_one (bson_t *query, bson_t *update);
+extern unsigned int jeeves_job_update_one (
+	bson_t *query, bson_t *update
+);
 
 // get all the jobs that are related to a user
 extern mongoc_cursor_t *jeeves_jobs_get_all_by_user (

@@ -5,40 +5,42 @@
 
 #include <cerver/utils/log.h>
 
-#include "mongo.h"
+#include <cmongo/collections.h>
+#include <cmongo/crud.h>
+#include <cmongo/model.h>
 
 #include "models/job.h"
 
 #define JOBS_COLL_NAME         				"jobs"
 
-mongoc_collection_t *jobs_collection = NULL;
+static CMongoModel *jobs_model = NULL;
 
-// opens handle to jobs collection
-unsigned int jobs_collection_get (void) {
+static void jeeves_job_doc_parse (
+	void *job_ptr, const bson_t *job_doc
+);
+
+unsigned int jobs_model_init (void) {
 
 	unsigned int retval = 1;
 
-	jobs_collection = mongo_collection_get (JOBS_COLL_NAME);
-	if (jobs_collection) {
-		cerver_log_debug ("Opened handle to jobs collection!");
-		retval = 0;
-	}
+	jobs_model = cmongo_model_create (JOBS_COLL_NAME);
+	if (jobs_model) {
+		cmongo_model_set_parser (jobs_model, jeeves_job_doc_parse);
 
-	else {
-		cerver_log_error ("Failed to get handle to jobs collection!");
+		retval = 0;
 	}
 
 	return retval;
 
 }
 
-void jobs_collection_close (void) {
+void jobs_model_end (void) {
 
-	if (jobs_collection) mongoc_collection_destroy (jobs_collection);
+	cmongo_model_delete (jobs_model);
 
 }
 
-const char *job_status_to_string (JobStatus status) {
+const char *job_status_to_string (const JobStatus status) {
 
 	switch (status) {
 		#define XX(num, name, string) case JOB_STATUS_##name: return #string;
@@ -50,7 +52,7 @@ const char *job_status_to_string (JobStatus status) {
 
 }
 
-const char *job_type_to_string (JobType type) {
+const char *job_type_to_string (const JobType type) {
 
 	switch (type) {
 		#define XX(num, name, string) case JOB_TYPE_##name: return #string;
@@ -104,9 +106,9 @@ JobImage *job_image_create (
 	JobImage *job_image = job_image_new ();
 	if (job_image) {
 		job_image->id = image_id;
-		if (saved) (void) strncpy (job_image->saved, saved, JOB_IMAGE_SAVED_LEN);
-		if (original) (void) strncpy (job_image->original, original, JOB_IMAGE_ORIGINAL_LEN);
-		if (result) (void) strncpy (job_image->result, result, JOB_IMAGE_RESULT_LEN);
+		if (saved) (void) strncpy (job_image->saved, saved, JOB_IMAGE_SAVED_LEN - 1);
+		if (original) (void) strncpy (job_image->original, original, JOB_IMAGE_ORIGINAL_LEN - 1);
+		if (result) (void) strncpy (job_image->result, result, JOB_IMAGE_RESULT_LEN - 1);
 	}
 
 	return job_image;
@@ -177,7 +179,9 @@ void jeeves_job_print (JeevesJob *job) {
 }
 
 
-void jeeves_job_doc_parse_images (JeevesJob *job, bson_iter_t *iter) {
+static void jeeves_job_doc_parse_images (
+	JeevesJob *job, bson_iter_t *iter
+) {
 
 	const u8 *data = NULL;
 	u32 len = 0;
@@ -212,7 +216,7 @@ void jeeves_job_doc_parse_images (JeevesJob *job, bson_iter_t *iter) {
 							(void) strncpy (
 								job_image->original,
 								value->value.v_utf8.str,
-								JOB_IMAGE_ORIGINAL_LEN
+								JOB_IMAGE_ORIGINAL_LEN - 1
 							);
 						}
 
@@ -221,7 +225,7 @@ void jeeves_job_doc_parse_images (JeevesJob *job, bson_iter_t *iter) {
 							(void) strncpy (
 								job_image->result,
 								value->value.v_utf8.str,
-								JOB_IMAGE_RESULT_LEN
+								JOB_IMAGE_RESULT_LEN - 1
 							);
 						}
 					}
@@ -239,8 +243,10 @@ void jeeves_job_doc_parse_images (JeevesJob *job, bson_iter_t *iter) {
 }
 
 static void jeeves_job_doc_parse (
-	JeevesJob *job, const bson_t *job_doc
+	void *job_ptr, const bson_t *job_doc
 ) {
+
+	JeevesJob *job = (JeevesJob *) job_ptr;
 
 	bson_iter_t iter = { 0 };
 	if (bson_iter_init (&iter, job_doc)) {
@@ -258,11 +264,21 @@ static void jeeves_job_doc_parse (
 			else if (!strcmp (key, "user"))
 				bson_oid_copy (&value->value.v_oid, &job->user_oid);
 
-			else if (!strcmp (key, "name") && value->value.v_utf8.str)
-				(void) strncpy (job->name, value->value.v_utf8.str, JOB_NAME_LEN);
+			else if (!strcmp (key, "name") && value->value.v_utf8.str) {
+				(void) strncpy (
+					job->name,
+					value->value.v_utf8.str,
+					JOB_NAME_LEN - 1
+				);
+			}
 
-			else if (!strcmp (key, "description") && value->value.v_utf8.str)
-				(void) strncpy (job->description, value->value.v_utf8.str, JOB_DESCRIPTION_LEN);
+			else if (!strcmp (key, "description") && value->value.v_utf8.str) {
+				(void) strncpy (
+					job->description,
+					value->value.v_utf8.str,
+					JOB_DESCRIPTION_LEN - 1
+				);
+			}
 
 			else if (!strcmp (key, "status"))
 				job->status = (JobStatus) value->value.v_int32;
@@ -330,13 +346,7 @@ const bson_t *jeeves_job_find_by_oid_and_user (
 
 	const bson_t *retval = NULL;
 
-	bson_t *job_query = bson_new ();
-	if (job_query) {
-		(void) bson_append_oid (job_query, "_id", -1, oid);
-		(void) bson_append_oid (job_query, "user", -1, user_oid);
-
-		retval = mongo_find_one_with_opts (jobs_collection, job_query, query_opts);
-	}
+	
 
 	return retval;
 
@@ -351,12 +361,16 @@ u8 jeeves_job_get_by_oid_and_user (
 	u8 retval = 1;
 
 	if (job) {
-		const bson_t *job_doc = jeeves_job_find_by_oid_and_user (oid, user_oid, query_opts);
-		if (job_doc) {
-			jeeves_job_doc_parse (job, job_doc);
-			bson_destroy ((bson_t *) job_doc);
+		bson_t *job_query = bson_new ();
+		if (job_query) {
+			(void) bson_append_oid (job_query, "_id", -1, oid);
+			(void) bson_append_oid (job_query, "user", -1, user_oid);
 
-			retval = 0;
+			retval = mongo_find_one_with_opts (
+				jobs_model,
+				job_query, query_opts,
+				job
+			);
 		}
 	}
 
@@ -401,7 +415,7 @@ bson_t *jeeves_job_update_bson (JeevesJob *job) {
 	if (job) {
 		doc = bson_new ();
 		if (doc) {
-			bson_t set_doc = { 0 };
+			bson_t set_doc = BSON_INITIALIZER;
 			(void) bson_append_document_begin (doc, "$set", -1, &set_doc);
 
 			(void) bson_append_utf8 (&set_doc, "name", -1, job->name, -1);
@@ -422,7 +436,7 @@ bson_t *jeeves_job_config_update_bson (JeevesJob *job) {
 	if (job) {
 		doc = bson_new ();
 		if (doc) {
-			bson_t set_doc = { 0 };
+			bson_t set_doc = BSON_INITIALIZER;
 			(void) bson_append_document_begin (doc, "$set", -1, &set_doc);
 
 			(void) bson_append_int32 (&set_doc, "type", -1, job->type);
@@ -439,7 +453,7 @@ bson_t *jeeves_job_status_update_bson (JobStatus status) {
 
 	bson_t *doc = bson_new ();
 	if (doc) {
-		bson_t set_doc = { 0 };
+		bson_t set_doc = BSON_INITIALIZER;
 		(void) bson_append_document_begin (doc, "$set", -1, &set_doc);
 		(void) bson_append_int32 (&set_doc, "status", -1, status);
 		(void) bson_append_document_end (doc, &set_doc);
@@ -453,7 +467,7 @@ bson_t *jeeves_job_type_update_bson (JobType type) {
 
 	bson_t *doc = bson_new ();
 	if (doc) {
-		bson_t set_doc = { 0 };
+		bson_t set_doc = BSON_INITIALIZER;
 		(void) bson_append_document_begin (doc, "$set", -1, &set_doc);
 		(void) bson_append_int32 (&set_doc, "type", -1, type);
 		(void) bson_append_document_end (doc, &set_doc);
@@ -579,7 +593,7 @@ bson_t *jeeves_job_image_result_update (
 	bson_t *doc = bson_new ();
 
 	if (doc) {
-		bson_t set_doc = { 0 };
+		bson_t set_doc = BSON_INITIALIZER;
 		(void) bson_append_document_begin (doc, "$set", -1, &set_doc);
 
 		(void) bson_append_utf8 (&set_doc, "images.$.result", -1, result, -1);
@@ -595,7 +609,7 @@ bson_t *jeeves_job_start_update_bson (void) {
 
 	bson_t *doc = bson_new ();
 	if (doc) {
-		bson_t set_doc = { 0 };
+		bson_t set_doc = BSON_INITIALIZER;
 		(void) bson_append_document_begin (doc, "$set", -1, &set_doc);
 		(void) bson_append_int32 (&set_doc, "status", -1, JOB_STATUS_RUNNING);
 		(void) bson_append_date_time (&set_doc, "started", -1, time (NULL));
@@ -610,7 +624,7 @@ bson_t *jeeves_job_stop_update_bson (void) {
 
 	bson_t *doc = bson_new ();
 	if (doc) {
-		bson_t set_doc = { 0 };
+		bson_t set_doc = BSON_INITIALIZER;
 		(void) bson_append_document_begin (doc, "$set", -1, &set_doc);
 		(void) bson_append_int32 (&set_doc, "status", -1, JOB_STATUS_STOPPED);
 		(void) bson_append_date_time (&set_doc, "stopped", -1, time (NULL));
@@ -625,7 +639,7 @@ bson_t *jeeves_job_end_update_bson (void) {
 
 	bson_t *doc = bson_new ();
 	if (doc) {
-		bson_t set_doc = { 0 };
+		bson_t set_doc = BSON_INITIALIZER;
 		(void) bson_append_document_begin (doc, "$set", -1, &set_doc);
 		(void) bson_append_int32 (&set_doc, "status", -1, JOB_STATUS_DONE);
 		(void) bson_append_date_time (&set_doc, "ended", -1, time (NULL));
@@ -636,10 +650,10 @@ bson_t *jeeves_job_end_update_bson (void) {
 
 }
 
-int jeeves_job_update_one (bson_t *query, bson_t *update) {
+unsigned int jeeves_job_update_one (bson_t *query, bson_t *update) {
 
 	return mongo_update_one (
-		jobs_collection,
+		jobs_model,
 		query, update
 	);
 
@@ -658,7 +672,7 @@ mongoc_cursor_t *jeeves_jobs_get_all_by_user (
 			(void) bson_append_oid (query, "user", -1, user_oid);
 
 			retval = mongo_find_all_cursor_with_opts (
-				jobs_collection,
+				jobs_model,
 				query, opts
 			);
 		}
