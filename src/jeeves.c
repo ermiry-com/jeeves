@@ -12,12 +12,14 @@
 #include <cerver/http/request.h>
 #include <cerver/http/response.h>
 
-#include <cerver/utils/utils.h>
 #include <cerver/utils/log.h>
+#include <cerver/utils/utils.h>
+
+#include <cmongo/mongo.h>
 
 #include "handler.h"
 #include "jeeves.h"
-#include "mongo.h"
+#include "runtime.h"
 #include "version.h"
 #include "worker.h"
 
@@ -30,6 +32,8 @@
 #include "controllers/roles.h"
 #include "controllers/users.h"
 
+RuntimeType RUNTIME = RUNTIME_TYPE_NONE;
+
 unsigned int PORT = CERVER_DEFAULT_PORT;
 
 unsigned int CERVER_RECEIVE_BUFFER_SIZE = CERVER_DEFAULT_RECEIVE_BUFFER_SIZE;
@@ -40,12 +44,11 @@ static const String *MONGO_URI = NULL;
 static const String *MONGO_APP_NAME = NULL;
 static const String *MONGO_DB = NULL;
 
+const String *PRIV_KEY = NULL;
+const String *PUB_KEY = NULL;
+
 bool ENABLE_USERS_ROUTES = false;
 
-HttpResponse *oki_doki = NULL;
-HttpResponse *bad_request = NULL;
-HttpResponse *server_error = NULL;
-HttpResponse *bad_user = NULL;
 HttpResponse *missing_values = NULL;
 
 HttpResponse *jeeves_works = NULL;
@@ -53,6 +56,22 @@ HttpResponse *current_version = NULL;
 
 HttpResponse *job_created_bad = NULL;
 HttpResponse *job_deleted_bad = NULL;
+
+static void jeeves_env_get_runtime (void) {
+	
+	char *runtime_env = getenv ("RUNTIME");
+	if (runtime_env) {
+		RUNTIME = runtime_from_string (runtime_env);
+		cerver_log_success (
+			"RUNTIME -> %s", runtime_to_string (RUNTIME)
+		);
+	}
+
+	else {
+		cerver_log_warning ("Failed to get RUNTIME from env!");
+	}
+
+}
 
 static unsigned int jeeves_env_get_port (void) {
 	
@@ -66,20 +85,20 @@ static unsigned int jeeves_env_get_port (void) {
 	}
 
 	else {
-		cerver_log_error ("Failed to get PORT from env");
+		cerver_log_error ("Failed to get PORT from env!");
 	}
 
 	return retval;
 
 }
 
-static void jeeves_env_get_receive_buffer_size (void) {
+static void jeeves_env_get_cerver_receive_buffer_size (void) {
 
 	char *buffer_size = getenv ("CERVER_RECEIVE_BUFFER_SIZE");
 	if (buffer_size) {
 		CERVER_RECEIVE_BUFFER_SIZE = (unsigned int) atoi (buffer_size);
 		cerver_log_success (
-			"CERVER_RECEIVE_BUFFER_SIZE -> %d\n", CERVER_RECEIVE_BUFFER_SIZE
+			"CERVER_RECEIVE_BUFFER_SIZE -> %d", CERVER_RECEIVE_BUFFER_SIZE
 		);
 	}
 
@@ -89,15 +108,14 @@ static void jeeves_env_get_receive_buffer_size (void) {
 			CERVER_RECEIVE_BUFFER_SIZE
 		);
 	}
-
 }
 
-static void jeeves_env_get_th_threads (void) {
+static void jeeves_env_get_cerver_th_threads (void) {
 
 	char *th_threads = getenv ("CERVER_TH_THREADS");
 	if (th_threads) {
 		CERVER_TH_THREADS = (unsigned int) atoi (th_threads);
-		cerver_log_success ("CERVER_TH_THREADS -> %d\n", CERVER_TH_THREADS);
+		cerver_log_success ("CERVER_TH_THREADS -> %d", CERVER_TH_THREADS);
 	}
 
 	else {
@@ -109,12 +127,12 @@ static void jeeves_env_get_th_threads (void) {
 
 }
 
-static void jeeves_env_get_connection_queue (void) {
+static void jeeves_env_get_cerver_connection_queue (void) {
 
 	char *connection_queue = getenv ("CERVER_CONNECTION_QUEUE");
 	if (connection_queue) {
 		CERVER_CONNECTION_QUEUE = (unsigned int) atoi (connection_queue);
-		cerver_log_success ("CERVER_CONNECTION_QUEUE -> %d\n", CERVER_CONNECTION_QUEUE);
+		cerver_log_success ("CERVER_CONNECTION_QUEUE -> %d", CERVER_CONNECTION_QUEUE);
 	}
 
 	else {
@@ -183,6 +201,44 @@ static unsigned int jeeves_env_get_mongo_uri (void) {
 
 }
 
+static unsigned int jeeves_env_get_private_key (void) {
+
+	unsigned int retval = 1;
+
+	char *priv_key_env = getenv ("PRIV_KEY");
+	if (priv_key_env) {
+		PRIV_KEY = str_new (priv_key_env);
+
+		retval = 0;
+	}
+
+	else {
+		cerver_log_error ("Failed to get PRIV_KEY from env!");
+	}
+
+	return retval;
+
+}
+
+static unsigned int jeeves_env_get_public_key (void) {
+
+	unsigned int retval = 1;
+
+	char *pub_key_env = getenv ("PUB_KEY");
+	if (pub_key_env) {
+		PUB_KEY = str_new (pub_key_env);
+
+		retval = 0;
+	}
+
+	else {
+		cerver_log_error ("Failed to get PUB_KEY from env!");
+	}
+
+	return retval;
+
+}
+
 static void jeeves_env_get_enable_users_routes (void) {
 
 	char *enable_users = getenv ("ENABLE_USERS_ROUTES");
@@ -210,19 +266,25 @@ static unsigned int jeeves_init_env (void) {
 
 	unsigned int errors = 0;
 
+	jeeves_env_get_runtime ();
+
 	errors |= jeeves_env_get_port ();
 
-	jeeves_env_get_receive_buffer_size ();
+	jeeves_env_get_cerver_receive_buffer_size ();
 
-	jeeves_env_get_th_threads ();
+	jeeves_env_get_cerver_th_threads ();
 
-	jeeves_env_get_connection_queue ();
-
-	errors |= jeeves_env_get_mongo_uri ();
+	jeeves_env_get_cerver_connection_queue ();
 
 	errors |= jeeves_env_get_mongo_app_name ();
 
 	errors |= jeeves_env_get_mongo_db ();
+
+	errors |= jeeves_env_get_mongo_uri ();
+
+	errors |= jeeves_env_get_private_key ();
+
+	errors |= jeeves_env_get_public_key ();
 
 	jeeves_env_get_enable_users_routes ();
 
@@ -233,22 +295,6 @@ static unsigned int jeeves_init_env (void) {
 static unsigned int jeeves_init_responses (void) {
 
 	unsigned int retval = 1;
-
-	oki_doki = http_response_json_key_value (
-		(http_status) 200, "oki", "doki"
-	);
-
-	bad_request = http_response_json_key_value (
-		(http_status) 400, "error", "Bad request!"
-	);
-
-	server_error = http_response_json_key_value (
-		(http_status) 500, "error", "Internal server error!"
-	);
-
-	bad_user = http_response_json_key_value (
-		(http_status) 400, "error", "Bad user!"
-	);
 
 	missing_values = http_response_json_key_value (
 		(http_status) 400, "error", "Missing values!"
@@ -281,7 +327,7 @@ static unsigned int jeeves_init_responses (void) {
 	}
 
 	if (
-		oki_doki && bad_request && server_error && bad_user && missing_values
+		missing_values
 		&& jeeves_works && current_version
 		&& job_created_bad && job_deleted_bad
 	) retval = 0;
@@ -305,17 +351,13 @@ static unsigned int jeeves_mongo_connect (void) {
 		if (!mongo_ping_db ()) {
 			cerver_log_success ("Connected to Mongo DB!");
 
-			// open handle to actions collection
-			errors |= actions_collection_get ();
+			errors |= actions_model_init ();
 
-			// open handle to jobs collection
-			errors |= jobs_collection_get ();
+			errors |= jobs_model_init ();
 
-			// open handle to roles collection
-			errors |= roles_collection_get ();
+			errors |= roles_model_init ();
 
-			// open handle to users collection
-			errors |= users_collection_get ();
+			errors |= users_model_init ();
 
 			connected_to_mongo = true;
 		}
@@ -378,13 +420,13 @@ unsigned int jeeves_init (void) {
 static unsigned int jeeves_mongo_end (void) {
 
 	if (mongo_get_status () == MONGO_STATUS_CONNECTED) {
-		actions_collection_close ();
+		actions_model_end ();
 
-		jobs_collection_close ();
+		jobs_model_end ();
 
-		roles_collection_close ();
+		roles_model_end ();
 
-		users_collection_close ();
+		users_model_end ();
 
 		mongo_disconnect ();
 	}
@@ -400,17 +442,13 @@ unsigned int jeeves_end (void) {
 
 	(void) jeeves_worker_end ();
 
-	http_respponse_delete (oki_doki);
-	http_respponse_delete (bad_request);
-	http_respponse_delete (server_error);
-	http_respponse_delete (bad_user);
-	http_respponse_delete (missing_values);
+	http_response_delete (missing_values);
 
-	http_respponse_delete (jeeves_works);
-	http_respponse_delete (current_version);
+	http_response_delete (jeeves_works);
+	http_response_delete (current_version);
 
-	http_respponse_delete (job_created_bad);
-	http_respponse_delete (job_deleted_bad);
+	http_response_delete (job_created_bad);
+	http_response_delete (job_deleted_bad);
 
 	errors |= jeeves_mongo_end ();
 
@@ -425,6 +463,9 @@ unsigned int jeeves_end (void) {
 	str_delete ((String *) MONGO_URI);
 	str_delete ((String *) MONGO_APP_NAME);
 	str_delete ((String *) MONGO_DB);
+
+	str_delete ((String *) PRIV_KEY);
+	str_delete ((String *) PUB_KEY);
 
 	return errors;
 
