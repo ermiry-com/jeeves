@@ -1,52 +1,79 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
-#include <cerver/types/types.h>
-#include <cerver/types/string.h>
+#include <cmongo/crud.h>
+#include <cmongo/select.h>
 
 #include <cerver/collections/dlist.h>
 
 #include <cerver/utils/log.h>
 
-#include "mongo.h"
-
 #include "models/role.h"
 
 static DoubleList *roles = NULL;
+
 const Role *common_role = NULL;
+
+const Role *jeeves_role_get_by_name (
+	const char *role_name
+);
+
+static unsigned int jeeves_roles_init_get_roles (void) {
+
+	unsigned int retval = 1;
+
+	CMongoSelect *select = cmongo_select_new ();
+	cmongo_select_insert_field (select, "name");
+
+	uint64_t n_docs = 0;
+	mongoc_cursor_t *roles_cursor = role_find_all (select, &n_docs);
+	if (roles_cursor) {
+		Role *role = NULL;
+		const bson_t *role_doc = NULL;
+		unsigned int errors = 0;
+		while (mongoc_cursor_next (roles_cursor, &role_doc)) {
+			role = role_new ();
+			if (role) {
+				role_doc_parse (role, role_doc);
+
+				errors |= dlist_insert_after (
+					roles,
+					dlist_end (roles),
+					role
+				);
+			}
+
+			else {
+				errors |= 1;
+			}
+		}
+
+		mongoc_cursor_destroy (roles_cursor);
+
+		retval = errors;
+	}
+
+	else {
+		(void) fprintf (stderr, "Failed to get roles cursor!");
+	}
+
+	cmongo_select_delete (select);
+
+	return retval;
+
+}
 
 unsigned int jeeves_roles_init (void) {
 
 	unsigned int retval = 1;
 
 	roles = dlist_init (role_delete, NULL);
-
-	u64 n_docs = 0;
-	mongoc_cursor_t *roles_cursor = mongo_find_all_cursor (roles_collection, bson_new (), NULL, &n_docs);
-	if (roles_cursor) {
-		// Role *role = NULL;
-		const bson_t *role_doc = NULL;
-		while (mongoc_cursor_next (roles_cursor, &role_doc)) {
-			dlist_insert_after (
-				roles,
-				dlist_end (roles),
-				role_doc_parse (role_doc)
-			);
-
-			bson_destroy ((bson_t *) role_doc);
+	if (!jeeves_roles_init_get_roles ()) {
+		common_role = jeeves_role_get_by_name ("common");
+		if (common_role) {
+			retval = 0;
 		}
-
-		String *role_query = str_new ("common");
-		common_role = role_get_by_name (role_query, false);
-		str_delete (role_query);
-
-		mongoc_cursor_destroy (roles_cursor);
-
-		retval = 0;
-	}
-
-	else {
-		cerver_log_error ("Failed to get roles cursor!");
 	}
 
 	return retval;
@@ -55,23 +82,55 @@ unsigned int jeeves_roles_init (void) {
 
 void jeeves_roles_end (void) {
 
-	role_delete ((Role *) common_role);
-
 	dlist_delete (roles);
 
 }
 
-const String *jeeves_roles_get_by_oid (const bson_oid_t *role_oid) {
+const Role *jeeves_role_get_by_oid (const bson_oid_t *role_oid) {
 
-	const String *retval = NULL;
+	const Role *retval = NULL;
 
 	if (role_oid) {
 		for (ListElement *le = dlist_start (roles); le; le = le->next) {
 			if (!bson_oid_compare (&((Role *) le->data)->oid, role_oid)) {
-				retval = ((Role *) le->data)->name;
+				retval = ((Role *) le->data);
 				break;
 			}
 		}
+	}
+
+	return retval;
+
+}
+
+const Role *jeeves_role_get_by_name (
+	const char *role_name
+) {
+
+	const Role *retval = NULL;
+
+	if (role_name) {
+		for (ListElement *le = dlist_start (roles); le; le = le->next) {
+			if (!strcmp (((Role *) le->data)->name, role_name)) {
+				retval = ((Role *) le->data);
+				break;
+			}
+		}
+	}
+
+	return retval;
+
+}
+
+const char *jeeves_role_name_get_by_oid (
+	const bson_oid_t *role_oid
+) {
+
+	const char *retval = NULL;
+
+	const Role *role = jeeves_role_get_by_oid (role_oid);
+	if (role) {
+		retval = role->name;
 	}
 
 	return retval;
