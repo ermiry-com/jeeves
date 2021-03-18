@@ -14,14 +14,14 @@
 #include <cerver/utils/utils.h>
 #include <cerver/utils/log.h>
 
-#include "errors.h"
 #include "jeeves.h"
-#include "mongo.h"
-
-#include "models/user.h"
 
 #include "controllers/roles.h"
 #include "controllers/users.h"
+
+#include "models/user.h"
+
+#define USER_FIELD_LEN			128
 
 // GET /api/users
 void users_handler (
@@ -33,58 +33,311 @@ void users_handler (
 
 }
 
-// generate and send back token
-static void users_generate_and_send_token (
-	const HttpReceive *http_receive,
-	const User *user, const String *role_name
+static void users_input_parse_json (
+	json_t *json_body,
+	const char **name,
+	const char **username,
+	const char **email,
+	const char **password,
+	const char **confirm
 ) {
 
-	bson_oid_to_string (&user->oid, (char *) user->id);
-
-	DoubleList *payload = dlist_init (key_value_pair_delete, NULL);
-	(void) dlist_insert_after (payload, dlist_end (payload), key_value_pair_create ("email", user->email));
-	(void) dlist_insert_after (payload, dlist_end (payload), key_value_pair_create ("id", user->id));
-	(void) dlist_insert_after (payload, dlist_end (payload), key_value_pair_create ("name", user->name));
-	(void) dlist_insert_after (payload, dlist_end (payload), key_value_pair_create ("role", role_name->str));
-	(void) dlist_insert_after (payload, dlist_end (payload), key_value_pair_create ("username", user->username));
-
-	// generate & send back auth token
-	char *token = http_cerver_auth_generate_jwt ((HttpCerver *) http_receive->cr->cerver->cerver_data, payload);
-	if (token) {
-		char *bearer = c_string_create ("Bearer %s", token);
-		if (bearer) {
-			char *json = c_string_create ("{\"token\": \"%s\"}", bearer);
-			if (json) {
-				HttpResponse *res = http_response_create (200, json, strlen (json));
-				if (res) {
-					http_response_compile (res);
-					// http_response_print (res);
-					(void) http_response_send (res, http_receive);
-					http_respponse_delete (res);
+	// get values from json to create a new transaction
+	char *string = NULL;
+	const char *key = NULL;
+	json_t *value = NULL;
+	if (json_typeof (json_body) == JSON_OBJECT) {
+		json_object_foreach (json_body, key, value) {
+			if (!strcmp (key, "name")) {
+				string = (char *) json_string_value (value);
+				if (strlen (string)) {
+					*name = string;
+					#ifdef JEEVES_DEBUG
+					(void) printf ("name: \"%s\"\n", *name);
+					#endif
 				}
-
-				free (json);
 			}
 
-			else {
-				(void) http_response_send (server_error, http_receive);
+			else if (!strcmp (key, "username")) {
+				string = (char *) json_string_value (value);
+				if (strlen (string)) {
+					*username = string;
+					#ifdef JEEVES_DEBUG
+					(void) printf ("username: \"%s\"\n", *username);
+					#endif
+				}
 			}
 
-			free (bearer);
+			else if (!strcmp (key, "email")) {
+				string = (char *) json_string_value (value);
+				if (strlen (string)) {
+					*email = string;
+					#ifdef JEEVES_DEBUG
+					(void) printf ("email: \"%s\"\n", *email);
+					#endif
+				}
+			}
+
+			else if (!strcmp (key, "password")) {
+				string = (char *) json_string_value (value);
+				if (strlen (string)) {
+					*password = string;
+					#ifdef JEEVES_DEBUG
+					(void) printf ("password: \"%s\"\n", *password);
+					#endif
+				}
+			}
+
+			else if (!strcmp (key, "confirm")) {
+				string = (char *) json_string_value (value);
+				if (strlen (string)) {
+					*confirm = string;
+					#ifdef JEEVES_DEBUG
+					(void) printf ("confirm: \"%s\"\n", *confirm);
+					#endif
+				}
+			}
+		}
+	}
+
+}
+
+static void users_bad_input (
+	const HttpReceive *http_receive,
+	const char *name,
+	const char *username,
+	const char *email,
+	const char *password,
+	const char *confirm,
+	bool login
+) {
+
+	char name_error[USER_FIELD_LEN] = { "null" };
+	char username_error[USER_FIELD_LEN] = { "null" };
+	char email_error[USER_FIELD_LEN] = { "null" };
+	char password_error[USER_FIELD_LEN] = { "null" };
+	char confirm_error[USER_FIELD_LEN] = { "null" };
+
+	if (!name && !login) (void) strncpy (name_error, "Name field is required!", USER_FIELD_LEN - 1);
+	if (!username && !login) (void) strncpy (username_error, "Username field is required!", USER_FIELD_LEN - 1);
+	if (!email) (void) strncpy (email_error, "Email field is required!", USER_FIELD_LEN - 1);
+	if (!password) (void) strncpy (password_error, "Password field is required!", USER_FIELD_LEN - 1);
+	if (!confirm && !login) (void) strncpy (confirm_error, "Password confirm field is required!", USER_FIELD_LEN - 1);
+
+	if (password && confirm && !login) {
+		if (strcmp (password, confirm)) {
+			(void) strncpy (confirm_error, "Passwords do not match!", USER_FIELD_LEN - 1);
+		}
+	}
+
+	char *json = NULL;
+
+	if (login) {
+		json = c_string_create (
+			"{\"email\": \"%s\", \"password\": \"%s\"}",
+			email_error, password_error
+		);
+	}
+
+	else {
+		json = c_string_create (
+			"{\"name\": \"%s\", \"username\": \"%s\", \"email\": \"%s\", \"password\": \"%s\", \"confirm\": \"%s\"}",
+			name_error, username_error, email_error, password_error, confirm_error
+		);
+	}
+
+	if (json) {
+		HttpResponse *res = http_response_create (400, json, strlen (json));
+		if (res) {
+			http_response_compile (res);
+			// http_response_print (res);
+			(void) http_response_send (res, http_receive);
+			http_response_delete (res);
 		}
 
-		else {
-			(void) http_response_send (server_error, http_receive);
-		}
-
-		free (token);
+		free (json);
 	}
 
 	else {
 		(void) http_response_send (server_error, http_receive);
 	}
 
-	dlist_delete (payload);
+}
+
+static bool users_register_handler_validate_input (
+	const HttpReceive *http_receive,
+	User *user_values,
+	const char *name,
+	const char *username,
+	const char *email,
+	const char *password,
+	const char *confirm
+) {
+	
+	bool valid = false;
+
+	if (name && username && email && password && confirm) {
+		if (!strcmp (password, confirm)) {
+			(void) strncpy (user_values->name, name, USER_NAME_LEN - 1);
+			(void) strncpy (user_values->username, username, USER_USERNAME_LEN - 1);
+			(void) strncpy (user_values->email, email, USER_EMAIL_LEN - 1);
+			(void) strncpy (user_values->password, password, USER_PASSWORD_LEN - 1);
+
+			valid = true;
+		}
+	}
+
+	if (!valid) {
+		#ifdef JEEVES_DEBUG
+		cerver_log_warning ("Missing user values!");
+		#endif
+
+		users_bad_input (
+			http_receive,
+			name, username, email, password, confirm,
+			false
+		);
+	}
+
+	return valid;
+
+}
+
+static bool users_login_handler_validate_input (
+	const HttpReceive *http_receive,
+	User *user_values,
+	const char *email,
+	const char *password
+) {
+
+	bool retval = false;
+
+	if (email && password) {
+		(void) strncpy (user_values->email, email, USER_EMAIL_LEN - 1);
+		(void) strncpy (user_values->password, password, USER_PASSWORD_LEN - 1);
+
+		retval = true;
+	}
+
+	else {
+		#ifdef JEEVES_DEBUG
+		cerver_log_warning ("Missing user values!");
+		#endif
+
+		users_bad_input (
+			http_receive,
+			NULL, NULL, email, password, NULL,
+			true
+		);
+	}
+
+	return retval;
+
+}
+
+static bool users_validate_input (
+	const HttpReceive *http_receive,
+	const String *request_body,
+	User *user_values, bool login
+) {
+
+	bool retval = false;
+
+	if (request_body) {
+		const char *name = NULL;
+		const char *username = NULL;
+		const char *email = NULL;
+		const char *password = NULL;
+		const char *confirm = NULL;
+
+		json_error_t json_error =  { 0 };
+		json_t *json_body = json_loads (request_body->str, 0, &json_error);
+		if (json_body) {
+			users_input_parse_json (
+				json_body,
+				&name,
+				&username,
+				&email,
+				&password,
+				&confirm
+			);
+
+			retval = login ?
+				users_login_handler_validate_input (
+					http_receive, user_values,
+					email, password
+				) :
+				users_register_handler_validate_input (
+					http_receive, user_values,
+					name, username, email, password, confirm
+				);
+
+			json_decref (json_body);
+		}
+
+		else {
+			cerver_log_error (
+				"json_loads () - json error on line %d: %s\n", 
+				json_error.line, json_error.text
+			);
+
+			(void) http_response_send (server_error, http_receive);
+		}
+	}
+
+	else {
+		cerver_log_error ("Missing request body to login user!");
+
+		(void) http_response_send (server_error, http_receive);
+	}
+
+	return retval;
+
+}
+
+// generate and send back token
+static void users_generate_and_send_token (
+	const HttpReceive *http_receive,
+	const User *user, const char *role_name
+) {
+
+	bson_oid_to_string (&user->oid, (char *) user->id);
+
+	HttpJwt *http_jwt = http_cerver_auth_jwt_new ();
+	if (http_jwt) {
+		http_cerver_auth_jwt_add_value_int (http_jwt, "iat", time (NULL));
+		http_cerver_auth_jwt_add_value (http_jwt, "id", user->id);
+		http_cerver_auth_jwt_add_value (http_jwt, "email", user->email);
+		http_cerver_auth_jwt_add_value (http_jwt, "name", user->name);
+		http_cerver_auth_jwt_add_value (http_jwt, "role", role_name);
+		http_cerver_auth_jwt_add_value (http_jwt, "username", user->username);
+
+		// generate & send back auth token
+		if (!http_cerver_auth_generate_bearer_jwt_json (
+			http_receive->http_cerver, http_jwt
+		)) {
+			HttpResponse *res = http_response_create (
+				200, http_jwt->json, strlen (http_jwt->json)
+			);
+
+			if (res) {
+				(void) http_response_compile (res);
+				// http_response_print (res);
+				(void) http_response_send (res, http_receive);
+				http_response_delete (res);
+			}
+		}
+
+		else {
+			(void) http_response_send (server_error, http_receive);
+		}
+	}
+
+	else {
+		(void) http_response_send (server_error, http_receive);
+	}
+
+	http_cerver_auth_jwt_delete (http_jwt);
 
 }
 
@@ -95,10 +348,7 @@ static u8 users_register_handler_save_user (
 
 	u8 retval = 1;
 
-	if (!mongo_insert_one (
-		users_collection,
-		user_bson_create (user)
-	)) {
+	if (!user_insert_one (user)) {
 		retval = 0;
 	}
 
@@ -111,132 +361,38 @@ static u8 users_register_handler_save_user (
 
 }
 
-static void users_register_handler_parse_json (
-	json_t *json_body,
-	char *name, char *username, char *email,
-	char *password, char *confirm
-) {
-
-	// get values from json to create a new transaction
-	const char *key = NULL;
-	json_t *value = NULL;
-	if (json_typeof (json_body) == JSON_OBJECT) {
-		json_object_foreach (json_body, key, value) {
-			if (!strcmp (key, "name")) {
-				(void) strncpy (name, json_string_value (value), USER_NAME_LEN);
-				// (void) printf ("name: \"%s\"\n", name);
-			}
-
-			else if (!strcmp (key, "username")) {
-				(void) strncpy (username, json_string_value (value), USER_USERNAME_LEN);
-				// (void) printf ("username: \"%s\"\n", username);
-			}
-
-			else if (!strcmp (key, "email")) {
-				(void) strncpy (email, json_string_value (value), USER_EMAIL_LEN);
-				// (void) printf ("email: \"%s\"\n", email);
-			}
-
-			else if (!strcmp (key, "password")) {
-				(void) strncpy (password, json_string_value (value), USER_PASSWORD_LEN);
-				// (void) printf ("password: \"%s\"\n", password);
-			}
-
-			else if (!strcmp (key, "confirm")) {
-				(void) strncpy (confirm, json_string_value (value), USER_PASSWORD_LEN);
-				// (void) printf ("confirm: \"%s\"\n", confirm);
-			}
-		}
-	}
-
-}
-
-static JeevesError users_register_handler_internal (
-	const String *request_body,
-	char *name, char *username, char *email,
-	char *password, char *confirm
-) {
-
-	JeevesError error = JEEVES_ERROR_NONE;
-
-	if (request_body) {
-		json_error_t json_error =  { 0 };
-		json_t *json_body = json_loads (request_body->str, 0, &json_error);
-		if (json_body) {
-			users_register_handler_parse_json (
-				json_body,
-				name, username, email,
-				password, confirm
-			);
-
-			if (
-				!strlen (name) || !strlen (username) || !strlen (email)
-				|| !strlen (password) || !strlen (confirm)
-			) {
-				#ifdef JEEVES_DEBUG
-				cerver_log_warning ("Missing user values!");
-				#endif
-
-				error = JEEVES_ERROR_MISSING_VALUES;
-			}
-
-			json_decref (json_body);
-		}
-
-		else {
-			cerver_log_error (
-				"json_loads () - json error on line %d: %s\n", 
-				json_error.line, json_error.text
-			);
-
-			error = JEEVES_ERROR_BAD_REQUEST;
-		}
-	}
-
-	return error;
-
-}
-
 // POST /api/users/register
 void users_register_handler (
 	const HttpReceive *http_receive,
 	const HttpRequest *request
 ) {
 
-	// get the user values from the request
-	// const String *name = http_request_body_get_value (request, "name");
-	// const String *username = http_request_body_get_value (request, "username");
-	// const String *email = http_request_body_get_value (request, "email");
-	// const String *password = http_request_body_get_value (request, "password");
-	// const String *confirm = http_request_body_get_value (request, "confirm");
+	User *user_values = jeeves_user_get ();
 
-	char name[USER_EMAIL_LEN] = { 0 };
-	char username[USER_EMAIL_LEN] = { 0 };
-	char email[USER_EMAIL_LEN] = { 0 };
-	char password[USER_PASSWORD_LEN] = { 0 };
-	char confirm[USER_PASSWORD_LEN] = { 0 };
-
-	JeevesError error = users_register_handler_internal (
+	if (users_validate_input (
+		http_receive,
 		request->body,
-		name, username, email,
-		password, confirm
-	);
-
-	if (error == JEEVES_ERROR_NONE) {
-		if (!jeeves_user_check_by_email (http_receive, email)) {
+		user_values,
+		false
+	)) {
+		if (!jeeves_user_check_by_email (user_values->email)) {
 			User *user = jeeves_user_create (
-				name,
-				username,
-				email,
-				password,
+				user_values->name,
+				user_values->username,
+				user_values->email,
+				user_values->password,
 				&common_role->oid
 			);
 			if (user) {
 				if (!users_register_handler_save_user (http_receive, user)) {
-					cerver_log_success ("User %s has created an account!", email);
+					cerver_log_success (
+						"User %s has created an account!", user_values->email
+					);
 
 					// return token upon success
-					users_generate_and_send_token (http_receive, user, common_role->name);
+					users_generate_and_send_token (
+						http_receive, user, common_role->name
+					);
 				}
 
 				jeeves_user_delete (user);
@@ -249,76 +405,16 @@ void users_register_handler (
 				(void) http_response_send (server_error, http_receive);
 			}
 		}
-	}
-
-	else {
-		jeeves_error_send_response (error, http_receive);
-	}
-
-}
-
-static void users_login_handler_parse_json (
-	json_t *json_body,
-	char *email, char *password
-) {
-
-	// get values from json to create a new transaction
-	const char *key = NULL;
-	json_t *value = NULL;
-	if (json_typeof (json_body) == JSON_OBJECT) {
-		json_object_foreach (json_body, key, value) {
-			if (!strcmp (key, "email")) {
-				(void) strncpy (email, json_string_value (value), USER_EMAIL_LEN);
-				// (void) printf ("email: \"%s\"\n", *email);
-			}
-
-			else if (!strcmp (key, "password")) {
-				(void) strncpy (password, json_string_value (value), USER_PASSWORD_LEN);
-				// (void) printf ("password: \"%s\"\n", *password);
-			}
-		}
-	}
-
-}
-
-static JeevesError users_login_handler_internal (
-	const String *request_body,
-	char *email, char *password
-) {
-
-	JeevesError error = JEEVES_ERROR_NONE;
-
-	if (request_body) {
-		json_error_t json_error =  { 0 };
-		json_t *json_body = json_loads (request_body->str, 0, &json_error);
-		if (json_body) {
-			users_login_handler_parse_json (
-				json_body,
-				email, password
-			);
-
-			if (!strlen (email) || !strlen (password)) {
-				#ifdef JEEVES_DEBUG
-				cerver_log_warning ("Missing user values!");
-				#endif
-
-				error = JEEVES_ERROR_MISSING_VALUES;
-			}
-
-			json_decref (json_body);
-		}
 
 		else {
-			cerver_log_error (
-				"json_loads () - json error on line %d: %s\n", 
-				json_error.line, json_error.text
-			);
-
-			error = JEEVES_ERROR_BAD_REQUEST;
+			#ifdef JEEVES_DEBUG
+			cerver_log_warning ("Found matching user with email: %s", user_values->email);
+			#endif
+			(void) http_response_send (repeated_email, http_receive);
 		}
 	}
 
-	return error;
+	jeeves_user_delete (user_values);
 
 }
 
@@ -328,28 +424,22 @@ void users_login_handler (
 	const HttpRequest *request
 ) {
 
-	// get the user values from the request
-	// const String *username = http_request_body_get_value (request, "username");
-	// const String *email = http_request_body_get_value (request, "email");
-	// const String *password = http_request_body_get_value (request, "password");
+	User *user_values = jeeves_user_get ();
 
-	char email[USER_EMAIL_LEN] = { 0 };
-	char password[USER_PASSWORD_LEN] = { 0 };
-
-	JeevesError error = users_login_handler_internal (
+	if (users_validate_input (
+		http_receive,
 		request->body,
-		email, password
-	);
-
-	if (error == JEEVES_ERROR_NONE) {
-		User *user = jeeves_user_get_by_email (email);
+		user_values,
+		true
+	)) {
+		User *user = jeeves_user_get_by_email (user_values->email);
 		if (user) {
 			#ifdef JEEVES_DEBUG
 			char oid_buffer[32] = { 0 };
 			bson_oid_to_string (&user->oid, oid_buffer);
 			#endif
 
-			if (!strcmp (user->password, password)) {
+			if (!strcmp (user->password, user_values->password)) {
 				#ifdef JEEVES_DEBUG
 				cerver_log_success ("User %s login -> success", oid_buffer);
 				#endif
@@ -357,7 +447,7 @@ void users_login_handler (
 				// generate and send token back to the user
 				users_generate_and_send_token (
 					http_receive,
-					user, jeeves_roles_get_by_oid (&user->role_oid)
+					user, jeeves_role_name_get_by_oid (&user->role_oid)
 				);
 			}
 
@@ -380,8 +470,6 @@ void users_login_handler (
 		}
 	}
 
-	else {
-		jeeves_error_send_response (error, http_receive);
-	}
+	jeeves_user_delete (user_values);
 
 }
