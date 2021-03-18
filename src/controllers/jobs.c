@@ -74,8 +74,8 @@ JeevesJob *jeeves_job_create (
 
 		bson_oid_init_from_string (&job->user_oid, user_id);
 
-		if (name) (void) strncpy (job->name, name, JOB_NAME_LEN);
-		if (description) (void) strncpy (job->description, description, JOB_DESCRIPTION_LEN);
+		if (name) (void) strncpy (job->name, name, JOB_NAME_LEN - 1);
+		if (description) (void) strncpy (job->description, description, JOB_DESCRIPTION_LEN - 1);
 
 		job->status = JOB_STATUS_WAITING;
 
