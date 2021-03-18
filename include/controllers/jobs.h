@@ -21,6 +21,12 @@ extern JeevesJob *jeeves_job_get_by_id_and_user (
 	const String *job_id, const bson_oid_t *user_oid
 );
 
+extern u8 jeeves_job_get_by_id_and_user_to_json (
+	const char *job_id, const bson_oid_t *user_oid,
+	const bson_t *query_opts,
+	char **json, size_t *json_len
+);
+
 extern void jeeves_job_return (void *job_ptr);
 
 #endif

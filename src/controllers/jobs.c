@@ -112,6 +112,29 @@ JeevesJob *jeeves_job_get_by_id_and_user (
 
 }
 
+u8 jeeves_job_get_by_id_and_user_to_json (
+	const char *job_id, const bson_oid_t *user_oid,
+	const bson_t *query_opts,
+	char **json, size_t *json_len
+) {
+
+	u8 retval = 1;
+
+	if (job_id) {
+		bson_oid_t job_oid = { 0 };
+		bson_oid_init_from_string (&job_oid, job_id);
+
+		retval = jeeves_job_get_by_oid_and_user_to_json (
+			&job_oid, user_oid,
+			query_opts,
+			json, json_len
+		);
+	}
+
+	return retval;
+
+}
+
 void jeeves_job_return (void *job_ptr) {
 
 	if (job_ptr) {
