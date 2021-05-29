@@ -32,107 +32,35 @@ void jeeves_get_jobs_handler (
 	User *user = (User *) request->decoded_data;
 	if (user) {
 		size_t json_len = 0;
-		char *json = transactions_get_all_by_user_to_json (
-			&user->oid, NULL,
-			&json_len
-		);
+		char *json = NULL;
 
-		if (json) {
-			(void) http_response_json_custom_reference_send (
-				http_receive,
-				200,
-				json, json_len
-			);
+		if (!jeeves_jobs_get_all_by_user_to_json (
+			&user->oid,
+			&json, &json_len
+		)) {
+			if (json) {
+				(void) http_response_json_custom_reference_send (
+					http_receive,
+					HTTP_STATUS_OK,
+					json, json_len
+				);
 
-			free (json);
+				free (json);
+			}
+
+			else {
+				(void) http_response_send (no_user_jobs, http_receive);
+			}
 		}
 
 		else {
-			(void) http_response_send (server_error, http_receive);
+			(void) http_response_send (no_user_jobs, http_receive);
 		}
 	}
 
 	else {
 		(void) http_response_send (bad_user_error, http_receive);
 	}
-
-}
-
-static void jeeves_job_parse_json (
-	json_t *json_body,
-	const char **name,
-	const char **description
-) {
-
-	// get values from json to create a new transaction
-	const char *key = NULL;
-	json_t *value = NULL;
-	if (json_typeof (json_body) == JSON_OBJECT) {
-		json_object_foreach (json_body, key, value) {
-			if (!strcmp (key, "name")) {
-				*name = json_string_value (value);
-				#ifdef JEEVES_DEBUG
-				(void) printf ("name: \"%s\"\n", *name);
-				#endif
-			}
-
-			else if (!strcmp (key, "description")) {
-				*description = json_string_value (value);
-				#ifdef JEEVES_DEBUG
-				(void) printf ("description: \"%s\"\n", *description);
-				#endif
-			}
-		}
-	}
-
-}
-
-static JeevesError jeeves_create_job_handler_internal (
-	JeevesJob **job,
-	const char *user_id, const String *request_body
-) {
-
-	JeevesError error = JEEVES_ERROR_NONE;
-
-	if (request_body) {
-		const char *name = NULL;
-		const char *description = NULL;
-
-		json_error_t json_error =  { 0 };
-		json_t *json_body = json_loads (request_body->str, 0, &json_error);
-		if (json_body) {
-			jeeves_job_parse_json (
-				json_body,
-				&name, &description
-			);
-
-			if (name) {
-				*job = jeeves_job_create (
-					user_id,
-					name, description
-				);
-
-				if (*job == NULL) error = JEEVES_ERROR_SERVER_ERROR;
-			}
-
-			else {
-				error = JEEVES_ERROR_MISSING_VALUES;
-			}
-
-			json_decref (json_body);
-		}
-
-		else {
-			cerver_log_error (
-				"json_loads () - json error on line %d: %s\n", 
-				json_error.line, json_error.text
-			);
-
-			error = JEEVES_ERROR_BAD_REQUEST;
-		}
-	}
-
-	return error;
 
 }
 
@@ -145,39 +73,22 @@ void jeeves_create_job_handler (
 
 	User *user = (User *) request->decoded_data;
 	if (user) {
-		JeevesJob *job = NULL;
-
-		JeevesError error = jeeves_create_job_handler_internal (
-			&job,
-			user->id, request->body
+		JeevesError error = jeeves_job_create (
+			user, request->body
 		);
 
-		if (error == JEEVES_ERROR_NONE) {
-			#ifdef JEEVES_DEBUG
-			jeeves_job_print (job);
-			#endif
-
-			// insert into the db
-			if (!jeeves_job_insert_one (job)) {
+		switch (error) {
+			case JEEVES_ERROR_NONE: {
 				// return success to user
 				(void) http_response_send (
 					oki_doki,
 					http_receive
 				);
-			}
+			} break;
 
-			else {
-				(void) http_response_send (
-					job_created_bad,
-					http_receive
-				);
-			}
-
-			jeeves_job_return (job);
-		}
-
-		else {
-			jeeves_error_send_response (error, http_receive);
+			default: {
+				jeeves_error_send_response (error, http_receive);
+			} break;
 		}
 	}
 
@@ -220,7 +131,7 @@ void jeeves_job_info_handler (
 					(void) http_response_json_custom_reference_send (
 						http_receive, 200, json, json_len
 					);
-					
+
 					free (json);
 				}
 
@@ -294,7 +205,7 @@ static JeevesError jeeves_job_config_handler_internal (
 
 		else {
 			cerver_log_error (
-				"json_loads () - json error on line %d: %s\n", 
+				"json_loads () - json error on line %d: %s\n",
 				json_error.line, json_error.text
 			);
 
@@ -367,7 +278,7 @@ void jeeves_job_config_handler (
 			);
 
 			http_request_multi_part_discard_files (request);
-			(void) http_response_send (bad_request, http_receive);
+			(void) http_response_send (bad_request_error, http_receive);
 		}
 	}
 
@@ -385,7 +296,7 @@ static void jeeves_job_upload_handler_internal (
 
 	// get images that will be added to the job
 	DoubleList *filenames = http_request_multi_parts_get_all_saved_filenames (request);
-	if (filenames) {		
+	if (filenames) {
 		// create jobs images
 		const char *filename = NULL;
 		JobImage *job_image = NULL;
@@ -404,7 +315,7 @@ static void jeeves_job_upload_handler_internal (
 			end = strstr (filename, JEEVES_UPLOADS_TEMP_DIR);
 			if (end) {
 				(void) snprintf (
-					job_image->original, JOB_IMAGE_ORIGINAL_LEN,
+					job_image->original, JOB_IMAGE_ORIGINAL_SIZE,
 					"%s/%s%s",
 					JEEVES_UPLOADS_PATH,
 					user_id,
@@ -434,7 +345,7 @@ static void jeeves_job_upload_handler_internal (
 					jeeves_job_status_update_bson (JOB_STATUS_READY)
 				);
 			}
-			
+
 			// request UPLOADS worker to save frames to persistent storage
 			(void) jeeves_uploads_worker_push (
 				jeeves_upload_new (request->dirname->str, user_id)
@@ -453,7 +364,7 @@ static void jeeves_job_upload_handler_internal (
 
 	else {
 		cerver_log_warning ("No images in request!");
-		(void) http_response_send (bad_request, http_receive);
+		(void) http_response_send (bad_request_error, http_receive);
 	}
 
 }
@@ -490,7 +401,7 @@ void jeeves_job_upload_handler (
 			);
 
 			http_request_multi_part_discard_files (request);
-			(void) http_response_send (bad_request, http_receive);
+			(void) http_response_send (bad_request_error, http_receive);
 		}
 	}
 
@@ -508,7 +419,7 @@ static void jeeves_job_start_handler_actual (
 
 	// check if the job has NOT been started
 	if (
-		jeeves_jobs_worker_check (&job->oid), 
+		jeeves_jobs_worker_check (&job->oid),
 		(job->status != JOB_STATUS_RUNNING)
 		&& (job->status == JOB_STATUS_READY)
 	) {
@@ -539,7 +450,7 @@ static void jeeves_job_start_handler_actual (
 	}
 
 	else {
-		(void) http_response_send (bad_request, http_receive);
+		(void) http_response_send (bad_request_error, http_receive);
 	}
 
 }
@@ -569,7 +480,7 @@ void jeeves_job_start_handler (
 		}
 
 		else {
-			(void) http_response_send (bad_request, http_receive);
+			(void) http_response_send (bad_request_error, http_receive);
 		}
 	}
 
@@ -612,7 +523,7 @@ void jeeves_job_stop_handler (
 		}
 
 		else {
-			(void) http_response_send (bad_request, http_receive);
+			(void) http_response_send (bad_request_error, http_receive);
 		}
 	}
 
