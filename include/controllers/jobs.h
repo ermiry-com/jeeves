@@ -3,11 +3,16 @@
 
 #include <cerver/types/string.h>
 
+#include "errors.h"
+
 #include "models/job.h"
 
 #define DEFAULT_JOBS_POOL_INIT			16
 
 struct _HttpResponse;
+
+extern struct _HttpResponse *no_user_jobs;
+extern struct _HttpResponse *no_user_job;
 
 extern struct _HttpResponse *job_created_bad;
 extern struct _HttpResponse *job_deleted_bad;
@@ -16,10 +21,9 @@ extern unsigned int jeeves_jobs_init (void);
 
 extern void jeeves_jobs_end (void);
 
-extern JeevesJob *jeeves_job_create (
-	const char *user_id,
-	const char *name,
-	const char *description
+extern unsigned int jeeves_jobs_get_all_by_user_to_json (
+	const bson_oid_t *user_oid,
+	char **json, size_t *json_len
 );
 
 extern JeevesJob *jeeves_job_get_by_id_and_user (
@@ -30,6 +34,10 @@ extern u8 jeeves_job_get_by_id_and_user_to_json (
 	const char *job_id, const bson_oid_t *user_oid,
 	const bson_t *query_opts,
 	char **json, size_t *json_len
+);
+
+extern JeevesError jeeves_job_create (
+	const User *user, const String *request_body
 );
 
 extern void jeeves_job_return (void *job_ptr);
