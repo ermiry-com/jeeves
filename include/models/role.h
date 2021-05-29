@@ -6,9 +6,9 @@
 
 #include <cmongo/select.h>
 
-#define ROLE_NAME_LEN			128
+#define ROLE_NAME_SIZE			128
 #define ROLE_ACTIONS_SIZE		32
-#define ROLE_ACTION_LEN			64
+#define ROLE_ACTION_SIZE			64
 
 extern unsigned int roles_model_init (void);
 
@@ -18,10 +18,10 @@ struct _Role {
 
 	bson_oid_t oid;
 
-	char name[ROLE_NAME_LEN];
+	char name[ROLE_NAME_SIZE];
 
 	unsigned int n_actions;
-	char actions[ROLE_ACTIONS_SIZE][ROLE_ACTION_LEN];
+	char actions[ROLE_ACTIONS_SIZE][ROLE_ACTION_SIZE];
 
 };
 

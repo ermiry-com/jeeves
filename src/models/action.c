@@ -64,13 +64,13 @@ RoleAction *action_create (
 	if (action) {
 		if (name) {
 			(void) strncpy (
-				action->name, name, ACTION_NAME_LEN - 1
+				action->name, name, ACTION_NAME_SIZE - 1
 			);
 		}
 
 		if (description) {
 			(void) strncpy (
-				action->description, description, ACTION_DESCRIPTION_LEN - 1
+				action->description, description, ACTION_DESCRIPTION_SIZE - 1
 			);
 		}
 	}
@@ -133,7 +133,7 @@ void action_doc_parse (
 				(void) strncpy (
 					action->name,
 					value->value.v_utf8.str,
-					ACTION_NAME_LEN - 1
+					ACTION_NAME_SIZE - 1
 				);
 			}
 
@@ -141,7 +141,7 @@ void action_doc_parse (
 				(void) strncpy (
 					action->description,
 					value->value.v_utf8.str,
-					ACTION_DESCRIPTION_LEN - 1
+					ACTION_DESCRIPTION_SIZE - 1
 				);
 			}
 		}
