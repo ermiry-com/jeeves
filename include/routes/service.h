@@ -22,4 +22,10 @@ extern void jeeves_auth_handler (
 	const struct _HttpRequest *request
 );
 
+// GET *
+extern void jeeves_catch_all_handler (
+	const struct _HttpReceive *http_receive,
+	const struct _HttpRequest *request
+);
+
 #endif
