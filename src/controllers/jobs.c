@@ -4,11 +4,12 @@
 
 #include <cerver/types/string.h>
 
-#include <cerver/collections/dlist.h>
 #include <cerver/collections/pool.h>
 
-#include <cerver/utils/utils.h>
+#include <cerver/http/response.h>
+
 #include <cerver/utils/log.h>
+#include <cerver/utils/utils.h>
 
 #include "jeeves.h"
 
@@ -45,17 +46,40 @@ static unsigned int jeeves_jobs_init_pool (void) {
 
 }
 
+static unsigned int jeeves_jobs_init_responses (void) {
+
+	unsigned int retval = 1;
+
+	job_created_bad = http_response_json_key_value (
+		HTTP_STATUS_BAD_REQUEST, "error", "Failed to create job!"
+	);
+
+	job_deleted_bad = http_response_json_key_value (
+		HTTP_STATUS_BAD_REQUEST, "error", "Failed to delete job!"
+	);
+
+	if (job_created_bad && job_deleted_bad) retval = 0;
+
+	return retval;
+
+}
+
 unsigned int jeeves_jobs_init (void) {
 
 	unsigned int errors = 0;
 
 	errors |= jeeves_jobs_init_pool ();
 
+	errors |= jeeves_jobs_init_responses ();
+
 	return errors;
 
 }
 
 void jeeves_jobs_end (void) {
+
+	http_response_delete (job_created_bad);
+	http_response_delete (job_deleted_bad);
 
 	pool_delete (jobs_pool);
 	jobs_pool = NULL;
@@ -74,8 +98,8 @@ JeevesJob *jeeves_job_create (
 
 		bson_oid_init_from_string (&job->user_oid, user_id);
 
-		if (name) (void) strncpy (job->name, name, JOB_NAME_LEN - 1);
-		if (description) (void) strncpy (job->description, description, JOB_DESCRIPTION_LEN - 1);
+		if (name) (void) strncpy (job->name, name, JOB_NAME_SIZE - 1);
+		if (description) (void) strncpy (job->description, description, JOB_DESCRIPTION_SIZE - 1);
 
 		job->status = JOB_STATUS_WAITING;
 

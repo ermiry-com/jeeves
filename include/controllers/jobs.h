@@ -7,6 +7,11 @@
 
 #define DEFAULT_JOBS_POOL_INIT			16
 
+struct _HttpResponse;
+
+extern struct _HttpResponse *job_created_bad;
+extern struct _HttpResponse *job_deleted_bad;
+
 extern unsigned int jeeves_jobs_init (void);
 
 extern void jeeves_jobs_end (void);
