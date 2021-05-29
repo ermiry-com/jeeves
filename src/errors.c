@@ -6,6 +6,8 @@
 #include "jeeves.h"
 #include "errors.h"
 
+#include "controllers/service.h"
+
 const char *jeeves_error_to_string (JeevesError type) {
 
 	switch (type) {
@@ -27,7 +29,7 @@ void jeeves_error_send_response (
 		case JEEVES_ERROR_NONE: break;
 
 		case JEEVES_ERROR_BAD_REQUEST:
-			(void) http_response_send (bad_request, http_receive);
+			(void) http_response_send (bad_request_error, http_receive);
 			break;
 
 		case JEEVES_ERROR_MISSING_VALUES:
