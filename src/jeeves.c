@@ -17,10 +17,8 @@
 
 #include <cmongo/mongo.h>
 
-#include "handler.h"
 #include "jeeves.h"
 #include "runtime.h"
-#include "version.h"
 #include "worker.h"
 
 #include "models/action.h"
@@ -30,6 +28,7 @@
 
 #include "controllers/jobs.h"
 #include "controllers/roles.h"
+#include "controllers/service.h"
 #include "controllers/users.h"
 
 RuntimeType RUNTIME = RUNTIME_TYPE_NONE;
@@ -40,22 +39,17 @@ unsigned int CERVER_RECEIVE_BUFFER_SIZE = CERVER_DEFAULT_RECEIVE_BUFFER_SIZE;
 unsigned int CERVER_TH_THREADS = CERVER_DEFAULT_POOL_THREADS;
 unsigned int CERVER_CONNECTION_QUEUE = CERVER_DEFAULT_CONNECTION_QUEUE;
 
-static const String *MONGO_URI = NULL;
-static const String *MONGO_APP_NAME = NULL;
-static const String *MONGO_DB = NULL;
+static char MONGO_URI[MONGO_URI_SIZE] = { 0 };
+static char MONGO_APP_NAME[MONGO_APP_NAME_SIZE] = { 0 };
+static char MONGO_DB[MONGO_DB_SIZE] = { 0 };
 
-const String *PRIV_KEY = NULL;
-const String *PUB_KEY = NULL;
+static char REAL_PRIV_KEY[PRIV_KEY_SIZE] = { 0 };
+const char *PRIV_KEY = REAL_PRIV_KEY;
+
+static char REAL_PUB_KEY[PUB_KEY_SIZE] = { 0 };
+const char *PUB_KEY = REAL_PUB_KEY;
 
 bool ENABLE_USERS_ROUTES = false;
-
-HttpResponse *missing_values = NULL;
-
-HttpResponse *jeeves_works = NULL;
-HttpResponse *current_version = NULL;
-
-HttpResponse *job_created_bad = NULL;
-HttpResponse *job_deleted_bad = NULL;
 
 static void jeeves_env_get_runtime (void) {
 	
@@ -150,7 +144,11 @@ static unsigned int jeeves_env_get_mongo_app_name (void) {
 
 	char *mongo_app_name_env = getenv ("MONGO_APP_NAME");
 	if (mongo_app_name_env) {
-		MONGO_APP_NAME = str_new (mongo_app_name_env);
+		(void) strncpy (
+			MONGO_APP_NAME,
+			mongo_app_name_env,
+			MONGO_APP_NAME_SIZE - 1
+		);
 
 		retval = 0;
 	}
@@ -169,7 +167,11 @@ static unsigned int jeeves_env_get_mongo_db (void) {
 
 	char *mongo_db_env = getenv ("MONGO_DB");
 	if (mongo_db_env) {
-		MONGO_DB = str_new (mongo_db_env);
+		(void) strncpy (
+			MONGO_DB,
+			mongo_db_env,
+			MONGO_DB_SIZE - 1
+		);
 
 		retval = 0;
 	}
@@ -188,7 +190,11 @@ static unsigned int jeeves_env_get_mongo_uri (void) {
 
 	char *mongo_uri_env = getenv ("MONGO_URI");
 	if (mongo_uri_env) {
-		MONGO_URI = str_new (mongo_uri_env);
+		(void) strncpy (
+			MONGO_URI,
+			mongo_uri_env,
+			MONGO_URI_SIZE - 1
+		);
 
 		retval = 0;
 	}
@@ -207,7 +213,11 @@ static unsigned int jeeves_env_get_private_key (void) {
 
 	char *priv_key_env = getenv ("PRIV_KEY");
 	if (priv_key_env) {
-		PRIV_KEY = str_new (priv_key_env);
+		(void) strncpy (
+			REAL_PRIV_KEY,
+			priv_key_env,
+			PRIV_KEY_SIZE - 1
+		);
 
 		retval = 0;
 	}
@@ -226,7 +236,11 @@ static unsigned int jeeves_env_get_public_key (void) {
 
 	char *pub_key_env = getenv ("PUB_KEY");
 	if (pub_key_env) {
-		PUB_KEY = str_new (pub_key_env);
+		(void) strncpy (
+			REAL_PUB_KEY,
+			pub_key_env,
+			PUB_KEY_SIZE - 1
+		);
 
 		retval = 0;
 	}
@@ -292,59 +306,15 @@ static unsigned int jeeves_init_env (void) {
 
 }
 
-static unsigned int jeeves_init_responses (void) {
-
-	unsigned int retval = 1;
-
-	missing_values = http_response_json_key_value (
-		(http_status) 400, "error", "Missing values!"
-	);
-
-	jeeves_works = http_response_json_key_value (
-		(http_status) 200, "msg", "Jeeves works!"
-	);
-
-	char *status = c_string_create (
-		"%s - %s", JEEVES_VERSION_NAME, JEEVES_VERSION_DATE
-	);
-
-	/*** jobs ***/
-
-	job_created_bad = http_response_json_key_value (
-		(http_status) 400, "error", "Failed to create job!"
-	);
-
-	job_deleted_bad = http_response_json_key_value (
-		(http_status) 400, "error", "Failed to delete job!"
-	);
-
-	if (status) {
-		current_version = http_response_json_key_value (
-			(http_status) 200, "version", status
-		);
-
-		free (status);
-	}
-
-	if (
-		missing_values
-		&& jeeves_works && current_version
-		&& job_created_bad && job_deleted_bad
-	) retval = 0;
-
-	return retval;
-
-}
-
 static unsigned int jeeves_mongo_connect (void) {
 
 	unsigned int errors = 0;
 
 	bool connected_to_mongo = false;
 
-	mongo_set_uri (MONGO_URI->str);
-	mongo_set_app_name (MONGO_APP_NAME->str);
-	mongo_set_db_name (MONGO_DB->str);
+	mongo_set_uri (MONGO_URI);
+	mongo_set_app_name (MONGO_APP_NAME);
+	mongo_set_db_name (MONGO_DB);
 
 	if (!mongo_connect ()) {
 		// test mongo connection
@@ -400,7 +370,7 @@ unsigned int jeeves_init (void) {
 
 		errors |= jeeves_mongo_init ();
 
-		errors |= jeeves_handler_init ();
+		errors |= jeeves_service_init ();
 
 		errors |= jeeves_users_init ();
 
@@ -442,30 +412,15 @@ unsigned int jeeves_end (void) {
 
 	(void) jeeves_worker_end ();
 
-	http_response_delete (missing_values);
-
-	http_response_delete (jeeves_works);
-	http_response_delete (current_version);
-
-	http_response_delete (job_created_bad);
-	http_response_delete (job_deleted_bad);
-
 	errors |= jeeves_mongo_end ();
 
 	jeeves_roles_end ();
 
 	jeeves_users_end ();
 
-	jeeves_handler_end ();
+	jeeves_service_end ();
 
 	jeeves_jobs_end ();
-
-	str_delete ((String *) MONGO_URI);
-	str_delete ((String *) MONGO_APP_NAME);
-	str_delete ((String *) MONGO_DB);
-
-	str_delete ((String *) PRIV_KEY);
-	str_delete ((String *) PUB_KEY);
 
 	return errors;
 

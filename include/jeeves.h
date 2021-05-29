@@ -10,7 +10,16 @@
 
 #define JEEVES_UPLOADS_PATH				"/api/uploads"
 
-struct _HttpResponse;
+#define MONGO_URI_SIZE					256
+#define MONGO_APP_NAME_SIZE				32
+#define MONGO_DB_SIZE					32
+
+#define PRIV_KEY_SIZE					128
+#define PUB_KEY_SIZE					128
+
+struct _HttpCerver;
+
+extern struct _HttpCerver *http_cerver;
 
 extern bool running;
 
@@ -22,18 +31,10 @@ extern unsigned int CERVER_RECEIVE_BUFFER_SIZE;
 extern unsigned int CERVER_TH_THREADS;
 extern unsigned int CERVER_CONNECTION_QUEUE;
 
-extern const String *PRIV_KEY;
-extern const String *PUB_KEY;
+extern const char *PRIV_KEY;
+extern const char *PUB_KEY;
 
 extern bool ENABLE_USERS_ROUTES;
-
-extern struct _HttpResponse *missing_values;
-
-extern struct _HttpResponse *jeeves_works;
-extern struct _HttpResponse *current_version;
-
-extern struct _HttpResponse *job_created_bad;
-extern struct _HttpResponse *job_deleted_bad;
 
 // inits jeeves main values
 extern unsigned int jeeves_init (void);
