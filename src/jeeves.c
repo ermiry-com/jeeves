@@ -374,8 +374,6 @@ unsigned int jeeves_init (void) {
 
 		errors |= jeeves_users_init ();
 
-		errors |= jeeves_init_responses ();
-
 		errors |= jeeves_jobs_init ();
 
 		errors |= jeeves_worker_init ();
