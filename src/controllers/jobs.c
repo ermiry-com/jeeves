@@ -17,6 +17,7 @@
 
 #include "errors.h"
 #include "jeeves.h"
+#include "worker.h"
 
 #include "models/job.h"
 
@@ -442,7 +443,7 @@ JeevesError jeeves_job_config (
 				}
 			}
 
-			jeeves_job_delete (job);
+			jeeves_job_return (job);
 		}
 
 		else {
@@ -459,6 +460,63 @@ JeevesError jeeves_job_config (
 		cerver_log_error ("jeeves_job_config () - Missing request body");
 		#endif
 
+		error = JEEVES_ERROR_BAD_REQUEST;
+	}
+
+	return error;
+
+}
+
+JeevesError jeeves_job_start (
+	const User *user, const String *job_id
+) {
+
+	JeevesError error = JEEVES_ERROR_NONE;
+
+	JeevesJob *job = jeeves_job_get_by_id_and_user (
+		job_id, &user->oid
+	);
+
+	if (job) {
+		// check if the job has NOT been started
+		if (
+			jeeves_jobs_worker_check (&job->oid),
+			(job->status != JOB_STATUS_RUNNING)
+			&& (job->status == JOB_STATUS_READY)
+		) {
+			// start job
+			if (!jeeves_jobs_worker_create (job)) {
+				// update the job in the db
+				if (!jeeves_job_update_start (&job->oid)) {
+					cerver_log_success ("Job %s has started!", job->id);
+				}
+
+				else {
+					cerver_log_error (
+						"jeeves_job_start_handler () - "
+						"failed to update job %s status",
+						job->id
+					);
+
+					jeeves_job_return (job);
+
+					error = JEEVES_ERROR_SERVER_ERROR;
+				}
+			}
+
+			else {
+				jeeves_job_return (job);
+				
+				error = JEEVES_ERROR_SERVER_ERROR;
+			}
+		}
+
+		else {
+			error = JEEVES_ERROR_BAD_REQUEST;
+		}
+	}
+
+	else {
 		error = JEEVES_ERROR_BAD_REQUEST;
 	}
 

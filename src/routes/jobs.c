@@ -15,7 +15,6 @@
 
 #include "errors.h"
 #include "jeeves.h"
-#include "worker.h"
 
 #include "models/job.h"
 #include "models/user.h"
@@ -309,49 +308,6 @@ void jeeves_job_upload_handler (
 
 }
 
-static void jeeves_job_start_handler_actual (
-	const HttpReceive *http_receive,
-	JeevesJob *job
-) {
-
-	// check if the job has NOT been started
-	if (
-		jeeves_jobs_worker_check (&job->oid),
-		(job->status != JOB_STATUS_RUNNING)
-		&& (job->status == JOB_STATUS_READY)
-	) {
-		// start job
-		if (!jeeves_jobs_worker_create (job)) {
-			// update the job in the db
-			if (!mongo_update_one (
-				jobs_collection,
-				jeeves_job_query_oid (&job->oid),
-				jeeves_job_start_update_bson ()
-			)) {
-				(void) http_response_send (oki_doki, http_receive);
-			}
-
-			else {
-				jeeves_job_return (job);
-				cerver_log_error (
-					"jeeves_job_start_handler () - failed to update job status"
-				);
-				(void) http_response_send (server_error, http_receive);
-			}
-		}
-
-		else {
-			jeeves_job_return (job);
-			(void) http_response_send (server_error, http_receive);
-		}
-	}
-
-	else {
-		(void) http_response_send (bad_request_error, http_receive);
-	}
-
-}
-
 // GET /api/jeeves/jobs/:id/start
 void jeeves_job_start_handler (
 	const HttpReceive *http_receive,
@@ -362,22 +318,16 @@ void jeeves_job_start_handler (
 
 	User *user = (User *) request->decoded_data;
 	if (user) {
-		bson_oid_init_from_string (&user->oid, user->id);
+		JeevesError error = jeeves_job_start (user, job_id);
 
-		// check that the job belongs to the user
-		JeevesJob *job = jeeves_job_get_by_id_and_user (
-			job_id, &user->oid
-		);
+		switch (error) {
+			case JEEVES_ERROR_NONE: {
+				(void) http_response_send (oki_doki, http_receive);
+			} break;
 
-		if (job) {
-			jeeves_job_start_handler_actual (
-				http_receive,
-				job
-			);
-		}
-
-		else {
-			(void) http_response_send (bad_request_error, http_receive);
+			default:
+				jeeves_error_send_response (error, http_receive);
+				break;
 		}
 	}
 
