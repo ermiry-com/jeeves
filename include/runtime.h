@@ -7,15 +7,17 @@
 	XX(2,  TEST,	      	Test)					\
 	XX(3,  PRODUCTION,      Production)
 
-typedef enum RuntimeType {
+enum _RuntimeType {
 
 	#define XX(num, name, string) RUNTIME_TYPE_##name = num,
 	RUNTIME_TYPE_MAP(XX)
 	#undef XX
 
-} RuntimeType;
+};
 
-extern const char *runtime_to_string (RuntimeType type);
+typedef enum _RuntimeType RuntimeType;
+
+extern const char *runtime_to_string (const RuntimeType type);
 
 extern const RuntimeType runtime_from_string (const char *string);
 
