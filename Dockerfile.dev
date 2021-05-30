@@ -1,5 +1,5 @@
-ARG CMONGO_VERSION=1.0b-3
-ARG CERVER_VERSION=2.0b-30
+ARG CMONGO_VERSION=1.0b-12
+ARG CERVER_VERSION=2.0b-36
 
 ARG BUILD_DEPS='ca-certificates libssl-dev libcurl4-openssl-dev gdb'
 
