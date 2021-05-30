@@ -18,7 +18,6 @@
 
 #include "files.h"
 #include "jeeves.h"
-#include "handler.h"
 #include "version.h"
 
 #include "controllers/users.h"
@@ -30,9 +29,10 @@
 bool running = false;
 
 static Cerver *jeeves_cerver = NULL;
+HttpCerver *http_cerver = NULL;
 
 static void end (int dummy) {
-	
+
 	running = false;
 
 	if (jeeves_cerver) {
@@ -153,17 +153,17 @@ static void start (void) {
 		cerver_set_handler_type (jeeves_cerver, CERVER_HANDLER_TYPE_THREADS);
 
 		/*** web cerver configuration ***/
-		HttpCerver *http_cerver = (HttpCerver *) jeeves_cerver->cerver_data;
+		http_cerver = (HttpCerver *) jeeves_cerver->cerver_data;
 
 		http_cerver_set_uploads_path (http_cerver, JEEVES_UPLOADS_TEMP_DIR);
 		http_cerver_set_uploads_dirname_generator (http_cerver, jeeves_uploads_dirname_generator);
 
 		http_cerver_auth_set_jwt_algorithm (http_cerver, JWT_ALG_RS256);
 		if (ENABLE_USERS_ROUTES) {
-			http_cerver_auth_set_jwt_priv_key_filename (http_cerver, PRIV_KEY->str);
+			http_cerver_auth_set_jwt_priv_key_filename (http_cerver, PRIV_KEY);
 		}
 
-		http_cerver_auth_set_jwt_pub_key_filename (http_cerver, PUB_KEY->str);
+		http_cerver_auth_set_jwt_pub_key_filename (http_cerver, PUB_KEY);
 
 		jeeves_set_routes (http_cerver);
 
