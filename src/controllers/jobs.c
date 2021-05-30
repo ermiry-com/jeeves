@@ -498,15 +498,11 @@ JeevesError jeeves_job_start (
 						job->id
 					);
 
-					jeeves_job_return (job);
-
 					error = JEEVES_ERROR_SERVER_ERROR;
 				}
 			}
 
 			else {
-				jeeves_job_return (job);
-				
 				error = JEEVES_ERROR_SERVER_ERROR;
 			}
 		}
@@ -514,6 +510,37 @@ JeevesError jeeves_job_start (
 		else {
 			error = JEEVES_ERROR_BAD_REQUEST;
 		}
+
+		jeeves_job_return (job);
+	}
+
+	else {
+		error = JEEVES_ERROR_BAD_REQUEST;
+	}
+
+	return error;
+
+}
+
+JeevesError jeeves_job_stop (
+	const User *user, const String *job_id
+) {
+
+	JeevesError error = JEEVES_ERROR_NONE;
+
+	JeevesJob *job = jeeves_job_get_by_id_and_user (
+		job_id, &user->oid
+	);
+
+	if (job) {
+		// TODO: stop job
+
+		// update the job in the db
+		if (!jeeves_job_update_stop (&job->oid)) {
+			cerver_log_success ("Job %s has been stopped!", job->id);
+		}
+
+		jeeves_job_return (job);
 	}
 
 	else {

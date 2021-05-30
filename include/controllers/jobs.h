@@ -49,6 +49,10 @@ extern JeevesError jeeves_job_start (
 	const User *user, const String *job_id
 );
 
+extern JeevesError jeeves_job_stop (
+	const User *user, const String *job_id
+);
+
 extern void jeeves_job_return (void *job_ptr);
 
 #endif

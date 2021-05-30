@@ -347,30 +347,16 @@ void jeeves_job_stop_handler (
 
 	User *user = (User *) request->decoded_data;
 	if (user) {
-		bson_oid_init_from_string (&user->oid, user->id);
+		JeevesError error = jeeves_job_stop (user, job_id);
 
-		// check that the job belongs to the user
-		JeevesJob *job = jeeves_job_get_by_id_and_user (
-			job_id, &user->oid
-		);
-
-		if (job) {
-			// TODO: stop job
-
-			// update the job in the db
-			if (!mongo_update_one (
-				jobs_collection,
-				jeeves_job_query_oid (&job->oid),
-				jeeves_job_stop_update_bson ()
-			)) {
+		switch (error) {
+			case JEEVES_ERROR_NONE: {
 				(void) http_response_send (oki_doki, http_receive);
-			}
+			} break;
 
-			jeeves_job_return (job);
-		}
-
-		else {
-			(void) http_response_send (bad_request_error, http_receive);
+			default:
+				jeeves_error_send_response (error, http_receive);
+				break;
 		}
 	}
 
