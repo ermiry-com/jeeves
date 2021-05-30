@@ -168,7 +168,7 @@ void jeeves_job_config_handler (
 
 		switch (error) {
 			case JEEVES_ERROR_NONE: {
-				http_request_multi_part_keep_files (request);
+				http_request_multi_part_keep_files ((HttpRequest *) request);
 				(void) http_response_send (oki_doki, http_receive);
 			} break;
 
