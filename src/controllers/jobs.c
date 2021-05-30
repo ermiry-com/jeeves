@@ -427,7 +427,7 @@ JeevesError jeeves_job_config (
 		if (job) {
 			error = jeeves_job_config_internal (job, request_body);
 
-			if (error = JEEVES_ERROR_NONE) {
+			if (error == JEEVES_ERROR_NONE) {
 				// update job's configuration in the db
 				if (!jeeves_job_update_config (job)) {
 					// check if the job is ready to be started

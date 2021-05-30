@@ -6,6 +6,7 @@
 #include "errors.h"
 
 #include "models/job.h"
+#include "models/user.h"
 
 #define DEFAULT_JOBS_POOL_INIT			16
 
