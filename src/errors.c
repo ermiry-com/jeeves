@@ -8,7 +8,7 @@
 
 #include "controllers/service.h"
 
-const char *jeeves_error_to_string (JeevesError type) {
+const char *jeeves_error_to_string (const JeevesError type) {
 
 	switch (type) {
 		#define XX(num, name, string) case JEEVES_ERROR_##name: return #string;
@@ -21,7 +21,7 @@ const char *jeeves_error_to_string (JeevesError type) {
 }
 
 void jeeves_error_send_response (
-	JeevesError error,
+	const JeevesError error,
 	const HttpReceive *http_receive
 ) {
 
