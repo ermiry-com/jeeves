@@ -380,22 +380,23 @@ unsigned int jobs_get_all_by_user_to_json (
 	char **json, size_t *json_len
 ) {
 
-	char *json = NULL;
+	unsigned int retval = 1;
 
 	if (user_oid) {
 		bson_t *query = bson_new ();
 		if (query) {
 			(void) bson_append_oid (query, "user", -1, user_oid);
 
-			json = mongo_find_all_cursor_with_opts_to_json (
+			retval = mongo_find_all_to_json (
 				jobs_model,
 				query, opts,
-				"jobs", json_len
+				"jobs",
+				json, json_len
 			);
 		}
 	}
 
-	return json;
+	return retval;
 
 }
 
@@ -626,25 +627,21 @@ unsigned int jeeves_job_update_images (
 
 }
 
-bson_t *jeeves_job_image_query (
-	bson_oid_t *oid, int image_id
+static bson_t *jeeves_job_image_query (
+	const bson_oid_t *oid, const int image_id
 ) {
 
-	bson_t *doc = NULL;
-
-	if (oid) {
-		doc = bson_new ();
-		if (doc) {
-			(void) bson_append_oid (doc, "_id", -1, oid);
-			(void) bson_append_int32 (doc, "images._id", -1, image_id);
-		}
+	bson_t *doc = bson_new ();
+	if (doc) {
+		(void) bson_append_oid (doc, "_id", -1, oid);
+		(void) bson_append_int32 (doc, "images._id", -1, image_id);
 	}
 
 	return doc;
 
 }
 
-bson_t *jeeves_job_image_result_update (
+static bson_t *jeeves_job_image_result_update (
 	const char *result
 ) {
 
@@ -660,6 +657,19 @@ bson_t *jeeves_job_image_result_update (
 	}
 
 	return doc;
+
+}
+
+unsigned int jeeves_job_update_image_result (
+	const bson_oid_t *job_oid, const int image_id,
+	const char *result
+) {
+
+	return mongo_update_one (
+		jobs_model,
+		jeeves_job_image_query (job_oid, image_id),
+		jeeves_job_image_result_update (result)
+	);
 
 }
 
@@ -717,7 +727,7 @@ unsigned int jeeves_job_update_stop (
 
 }
 
-bson_t *jeeves_job_end_update_bson (void) {
+static bson_t *jeeves_job_end_update_bson (void) {
 
 	bson_t *doc = bson_new ();
 	if (doc) {
@@ -729,5 +739,17 @@ bson_t *jeeves_job_end_update_bson (void) {
 	}
 
 	return doc;
+
+}
+
+unsigned int jeeves_job_update_end (
+	const bson_oid_t *job_oid
+) {
+
+	return mongo_update_one (
+		jobs_model,
+		jeeves_job_query_oid (job_oid),
+		jeeves_job_end_update_bson ()
+	);
 
 }

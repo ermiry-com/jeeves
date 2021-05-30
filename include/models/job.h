@@ -112,48 +112,57 @@ extern void jeeves_job_delete (void *job_ptr);
 
 extern void jeeves_job_print (const JeevesJob *job);
 
-static u8 jeeves_job_get_by_oid_and_user (
+extern u8 jeeves_job_get_by_oid_and_user (
 	JeevesJob *job,
 	const bson_oid_t *oid, const bson_oid_t *user_oid,
 	const bson_t *query_opts
 );
 
-static u8 jeeves_job_get_by_oid_and_user_to_json (
+extern u8 jeeves_job_get_by_oid_and_user_to_json (
 	const bson_oid_t *oid, const bson_oid_t *user_oid,
 	const bson_t *query_opts,
 	char **json, size_t *json_len
 );
 
-static unsigned int jobs_get_all_by_user_to_json (
+extern unsigned int jobs_get_all_by_user_to_json (
 	const bson_oid_t *user_oid, const bson_t *opts,
 	char **json, size_t *json_len
 );
 
-static unsigned int jeeves_job_insert_one (
+extern unsigned int jeeves_job_insert_one (
 	const JeevesJob *job
 );
 
-static unsigned int jeeves_job_update_one (
+extern unsigned int jeeves_job_update_one (
 	const JeevesJob *job
 );
 
-static unsigned int jeeves_job_update_status (
+extern unsigned int jeeves_job_update_status (
 	const bson_oid_t *job_oid, const JobStatus status
 );
 
-static unsigned int jeeves_job_update_config (
+extern unsigned int jeeves_job_update_config (
 	const JeevesJob *job
 );
 
-static unsigned int jeeves_job_update_images (
+extern unsigned int jeeves_job_update_images (
 	const bson_oid_t *job_oid, DoubleList *images
 );
 
-static unsigned int jeeves_job_update_start (
+extern unsigned int jeeves_job_update_image_result (
+	const bson_oid_t *job_oid, const int image_id,
+	const char *result
+);
+
+extern unsigned int jeeves_job_update_start (
 	const bson_oid_t *job_oid
 );
 
-static unsigned int jeeves_job_update_stop (
+extern unsigned int jeeves_job_update_stop (
+	const bson_oid_t *job_oid
+);
+
+extern unsigned int jeeves_job_update_end (
 	const bson_oid_t *job_oid
 );
 
