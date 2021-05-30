@@ -40,6 +40,11 @@ extern JeevesError jeeves_job_create (
 	const User *user, const String *request_body
 );
 
+extern JeevesError jeeves_job_config (
+	const User *user, const String *job_id,
+	const String *request_body
+);
+
 extern void jeeves_job_return (void *job_ptr);
 
 #endif

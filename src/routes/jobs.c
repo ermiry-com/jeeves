@@ -129,7 +129,7 @@ void jeeves_job_info_handler (
 			)) {
 				if (json) {
 					(void) http_response_json_custom_reference_send (
-						http_receive, 200, json, json_len
+						http_receive, HTTP_STATUS_OK, json, json_len
 					);
 
 					free (json);
@@ -141,8 +141,7 @@ void jeeves_job_info_handler (
 			}
 
 			else {
-				// TODO: change to job not found response
-				(void) http_response_send (server_error, http_receive);
+				(void) http_response_send (no_user_job, http_receive);
 			}
 		}
 	}
@@ -150,70 +149,6 @@ void jeeves_job_info_handler (
 	else {
 		(void) http_response_send (bad_user_error, http_receive);
 	}
-
-}
-
-static void jeeves_job_config_parse_json (
-	json_t *json_body,
-	const char **type
-) {
-
-	// get values from json to create a new transaction
-	const char *key = NULL;
-	json_t *value = NULL;
-	if (json_typeof (json_body) == JSON_OBJECT) {
-		json_object_foreach (json_body, key, value) {
-			if (!strcmp (key, "type")) {
-				*type = json_string_value (value);
-				(void) printf ("type: \"%s\"\n", *type);
-			}
-		}
-	}
-
-}
-
-static JeevesError jeeves_job_config_handler_internal (
-	const String *request_body, const char *user_id,
-	JeevesJob *job
-) {
-
-	JeevesError error = JEEVES_ERROR_NONE;
-
-	if (request_body) {
-		// the job type to be executed
-		const char *type = NULL;
-
-		json_error_t json_error =  { 0 };
-		json_t *json_body = json_loads (request_body->str, 0, &json_error);
-		if (json_body) {
-			jeeves_job_config_parse_json (
-				json_body,
-				&type
-			);
-
-			if (type) {
-				// set configuration to current job
-				job->type = job_type_from_string (type);
-			}
-
-			else {
-				error = JEEVES_ERROR_MISSING_VALUES;
-			}
-
-			json_decref (json_body);
-		}
-
-		else {
-			cerver_log_error (
-				"json_loads () - json error on line %d: %s\n",
-				json_error.line, json_error.text
-			);
-
-			error = JEEVES_ERROR_BAD_REQUEST;
-		}
-	}
-
-	return error;
 
 }
 
@@ -227,58 +162,20 @@ void jeeves_job_config_handler (
 
 	User *user = (User *) request->decoded_data;
 	if (user) {
-		bson_oid_init_from_string (&user->oid, user->id);
-
-		JeevesJob *job = jeeves_job_get_by_id_and_user (
-			job_id, &user->oid
+		JeevesError error = jeeves_job_config (
+			user, job_id,
+			request->body
 		);
 
-		if (job) {
-			// get configuration for selected job
-			JeevesError error = jeeves_job_config_handler_internal (
-				request->body, user->id,
-				job
-			);
+		switch (error) {
+			case JEEVES_ERROR_NONE: {
+				http_request_multi_part_keep_files (request);
+				(void) http_response_send (oki_doki, http_receive);
+			} break;
 
-			if (error == JEEVES_ERROR_NONE) {
-				// update job's configuration in the db
-				if (!mongo_update_one (
-					jobs_collection,
-					jeeves_job_query_oid (&job->oid),
-					jeeves_job_config_update_bson (job)
-				)) {
-					// check if the job is ready to be started
-					if (job->n_images) {
-						(void) mongo_update_one (
-							jobs_collection,
-							jeeves_job_query_oid (&job->oid),
-							jeeves_job_status_update_bson (JOB_STATUS_READY)
-						);
-					}
-
-					(void) http_response_send (oki_doki, http_receive);
-				}
-
-				else {
-					(void) http_response_send (server_error, http_receive);
-				}
-			}
-
-			else {
+			default:
 				jeeves_error_send_response (error, http_receive);
-			}
-
-			jeeves_job_return (job);
-		}
-
-		else {
-			cerver_log_warning (
-				"config_handler () - Job %s does NOT belong to user %s",
-				job_id->str, user->id
-			);
-
-			http_request_multi_part_discard_files (request);
-			(void) http_response_send (bad_request_error, http_receive);
+				break;
 		}
 	}
 

@@ -348,6 +348,124 @@ JeevesError jeeves_job_create (
 
 }
 
+static void jeeves_job_config_parse_json (
+	json_t *json_body,
+	const char **type
+) {
+
+	// get values from json to create a new transaction
+	const char *key = NULL;
+	json_t *value = NULL;
+	if (json_typeof (json_body) == JSON_OBJECT) {
+		json_object_foreach (json_body, key, value) {
+			if (!strcmp (key, "type")) {
+				*type = json_string_value (value);
+				#ifdef JEEVES_DEBUG
+				(void) printf ("type: \"%s\"\n", *type);
+				#endif
+			}
+		}
+	}
+
+}
+
+static JeevesError jeeves_job_config_internal (
+	JeevesJob *job, const String *request_body
+) {
+
+	JeevesError error = JEEVES_ERROR_NONE;
+
+	// the job type to be executed
+	const char *type = NULL;
+
+	json_error_t json_error =  { 0 };
+	json_t *json_body = json_loads (request_body->str, 0, &json_error);
+	if (json_body) {
+		jeeves_job_config_parse_json (
+			json_body,
+			&type
+		);
+
+		if (type) {
+			// set configuration to current job
+			job->type = job_type_from_string (type);
+		}
+
+		else {
+			error = JEEVES_ERROR_MISSING_VALUES;
+		}
+
+		json_decref (json_body);
+	}
+
+	else {
+		cerver_log_error (
+			"json_loads () - json error on line %d: %s\n",
+			json_error.line, json_error.text
+		);
+
+		error = JEEVES_ERROR_BAD_REQUEST;
+	}
+
+	return error;
+
+}
+
+JeevesError jeeves_job_config (
+	const User *user, const String *job_id,
+	const String *request_body
+) {
+
+	JeevesError error = JEEVES_ERROR_NONE;
+
+	if (request_body) {
+		JeevesJob *job = jeeves_job_get_by_id_and_user (
+			job_id, &user->oid
+		);
+
+		if (job) {
+			error = jeeves_job_config_internal (job, request_body);
+
+			if (error = JEEVES_ERROR_NONE) {
+				// update job's configuration in the db
+				if (!jeeves_job_update_config (job)) {
+					// check if the job is ready to be started
+					if (job->n_images) {
+						(void) jeeves_job_update_status (
+							&job->oid, JOB_STATUS_READY
+						);
+					}
+				}
+
+				else {
+					error = JEEVES_ERROR_SERVER_ERROR;
+				}
+			}
+
+			jeeves_job_delete (job);
+		}
+
+		else {
+			#ifdef JEEVES_DEBUG
+			cerver_log_error ("Job was not found!");
+			#endif
+
+			error = JEEVES_ERROR_BAD_REQUEST;
+		}
+	}
+
+	else {
+		#ifdef JEEVES_DEBUG
+		cerver_log_error ("jeeves_job_config () - Missing request body");
+		#endif
+
+		error = JEEVES_ERROR_BAD_REQUEST;
+	}
+
+	return error;
+
+}
+
 void jeeves_job_return (void *job_ptr) {
 
 	if (job_ptr) {
