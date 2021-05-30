@@ -467,6 +467,84 @@ JeevesError jeeves_job_config (
 
 }
 
+JeevesError jeeves_job_upload (
+	const User *user, const String *job_id,
+	DoubleList *filenames, const char *dirname
+) {
+
+	JeevesError error = JEEVES_ERROR_NONE;
+
+	JeevesJob *job = jeeves_job_get_by_id_and_user (
+		job_id, &user->oid
+	);
+
+	if (job) {
+		// create jobs images
+		const char *filename = NULL;
+		JobImage *job_image = NULL;
+		int image_id = !job->n_images ? 0 : job->n_images - 1;
+		DoubleList *images = dlist_init (job_image_delete, NULL);
+		char *end = NULL;
+		for (ListElement *le = dlist_start (filenames); le; le = le->next) {
+			filename = (const char *) le->data;
+
+			job_image = job_image_create (
+				image_id,
+				filename,
+				NULL, "null"
+			);
+
+			end = strstr (filename, JEEVES_UPLOADS_TEMP_DIR);
+			if (end) {
+				(void) snprintf (
+					job_image->original, JOB_IMAGE_ORIGINAL_SIZE,
+					"%s/%s%s",
+					JEEVES_UPLOADS_PATH,
+					user->id,
+					end + strlen (JEEVES_UPLOADS_TEMP_DIR)
+				);
+			}
+
+			(void) dlist_insert_at_end_unsafe (
+				images,
+				job_image
+			);
+
+			image_id += 1;
+		}
+
+		// update current job with new images
+		if (!jeeves_job_update_images (&job->oid, images)) {
+			// check if the job is ready to be started
+			if (job->type != JOB_TYPE_NONE) {
+				(void) jeeves_job_update_status (
+					&job->oid, JOB_STATUS_READY
+				);
+			}
+
+			// request UPLOADS worker to save frames to persistent storage
+			(void) jeeves_uploads_worker_push (
+				jeeves_upload_new (dirname, user->id)
+			);
+		}
+
+		else {
+			error = JEEVES_ERROR_SERVER_ERROR;
+		}
+
+		dlist_delete (images);
+
+		jeeves_job_return (job);
+	}
+
+	else {
+		error = JEEVES_ERROR_BAD_REQUEST;
+	}
+
+	return error;
+
+}
+
 JeevesError jeeves_job_start (
 	const User *user, const String *job_id
 ) {

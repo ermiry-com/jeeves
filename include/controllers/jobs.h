@@ -45,6 +45,11 @@ extern JeevesError jeeves_job_config (
 	const String *request_body
 );
 
+extern JeevesError jeeves_job_upload (
+	const User *user, const String *job_id,
+	DoubleList *filenames, const char *dirname
+);
+
 extern JeevesError jeeves_job_start (
 	const User *user, const String *job_id
 );
