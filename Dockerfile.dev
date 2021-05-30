@@ -24,6 +24,15 @@ RUN mkdir /opt/cerver && cd /opt/cerver \
     && cd cerver-${CERVER_VERSION} \
     && make -j4 && make install
 
+# osiris mini version
+ARG OSIRIS_VERSION=0.1
+
+RUN mkdir /opt/osiris-mini && cd /opt/osiris-mini \
+    && wget -q https://github.com/ermiry/osiris-mini/archive/${OSIRIS_VERSION}.zip \
+    && unzip ${OSIRIS_VERSION}.zip \
+    && cd osiris-mini-${OSIRIS_VERSION} \
+    && make DEVELOPMENT='' -j4 && make DEVELOPMENT='' install
+
 RUN ldconfig
 
 # jeeves
