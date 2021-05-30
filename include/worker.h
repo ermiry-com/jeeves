@@ -22,13 +22,13 @@ extern u8 jeeves_jobs_worker_create (JeevesJob *job);
 
 #pragma region uploads
 
-#define JEEVES_UPLOAD_DIRNAME_LEN             256
-#define JEEVES_UPLOAD_USER_ID_LEN             32
+#define JEEVES_UPLOAD_DIRNAME_SIZE             256
+#define JEEVES_UPLOAD_USER_ID_SIZE             32
 
 typedef struct JeevesUpload {
 
-	char dirname[JEEVES_UPLOAD_DIRNAME_LEN];
-	char user_id[JEEVES_UPLOAD_USER_ID_LEN];
+	char dirname[JEEVES_UPLOAD_DIRNAME_SIZE];
+	char user_id[JEEVES_UPLOAD_USER_ID_SIZE];
 
 } JeevesUpload;
 
