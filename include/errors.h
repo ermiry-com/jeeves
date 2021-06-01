@@ -16,10 +16,14 @@ typedef enum JeevesError {
 
 } JeevesError;
 
-extern const char *jeeves_error_to_string (JeevesError type);
+struct _HttpReceive;
+
+extern const char *jeeves_error_to_string (
+	const JeevesError type
+);
 
 extern void jeeves_error_send_response (
-	JeevesError error,
+	const JeevesError error,
 	const struct _HttpReceive *http_receive
 );
 

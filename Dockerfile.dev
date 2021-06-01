@@ -1,42 +1,37 @@
-FROM gcc as builder
+ARG CMONGO_VERSION=1.0b-12
+ARG CERVER_VERSION=2.0b-36
 
-WORKDIR /opt
+ARG BUILD_DEPS='ca-certificates libssl-dev libcurl4-openssl-dev gdb'
 
-RUN apt-get update && apt-get install -y cmake libssl-dev
+FROM ermiry/mongoc:builder
 
-# mongo c driver
-ARG MONGOC_VERSION=1.15.1
+ARG BUILD_DEPS
+RUN apt-get update && apt-get install -y ${BUILD_DEPS}
 
-RUN wget -q https://github.com/mongodb/mongo-c-driver/releases/download/${MONGOC_VERSION}/mongo-c-driver-${MONGOC_VERSION}.tar.gz \
-    && tar xzf mongo-c-driver-${MONGOC_VERSION}.tar.gz \
-    && cd mongo-c-driver-${MONGOC_VERSION} \
-    && mkdir cmake-build && cd cmake-build \
-    && cmake -D ENABLE_AUTOMATIC_INIT_AND_CLEANUP=OFF -D CMAKE_BUILD_TYPE=Release -D ENABLE_SSL=OPENSSL -D ENABLE_SRV=ON .. \
+# cmongo
+ARG CMONGO_VERSION
+RUN mkdir /opt/cmongo && cd /opt/cmongo \
+    && wget -q --no-check-certificate https://github.com/ermiry-com/cmongo/archive/${CMONGO_VERSION}.zip \
+    && unzip ${CMONGO_VERSION}.zip \
+    && cd cmongo-${CMONGO_VERSION} \
     && make -j4 && make install
 
-############
-FROM ubuntu:bionic
-
-ARG BUILD_DEPS='wget unzip build-essential pkg-config gdb'
-ARG RUNTIME_DEPS='libssl-dev'
-
-RUN apt-get update && apt-get install -y ${BUILD_DEPS} ${RUNTIME_DEPS} && apt-get clean
-
 # cerver
-ARG CERVER_VERSION=2.0b-16
-
+ARG CERVER_VERSION
 RUN mkdir /opt/cerver && cd /opt/cerver \
     && wget -q https://github.com/ermiry/cerver/archive/${CERVER_VERSION}.zip \
     && unzip ${CERVER_VERSION}.zip \
     && cd cerver-${CERVER_VERSION} \
     && make -j4 && make install
 
-# mongoc files
-COPY --from=builder /usr/lib/x86_64-linux-gnu/libicudata.so.63 /usr/lib/x86_64-linux-gnu/libicudata.so.63
-COPY --from=builder /usr/lib/x86_64-linux-gnu/libicuuc.so.63 /usr/lib/x86_64-linux-gnu/libicuuc.so.63
-COPY --from=builder /usr/local/include/ /usr/local/include/
-COPY --from=builder /usr/local/lib/libmongoc-1.0.so /usr/local/lib/libmongoc-1.0.so
-COPY --from=builder /usr/local/lib/libbson-1.0.so /usr/local/lib/libbson-1.0.so
+# osiris mini version
+ARG OSIRIS_VERSION=0.1
+
+RUN mkdir /opt/osiris-mini && cd /opt/osiris-mini \
+    && wget -q https://github.com/ermiry/osiris-mini/archive/${OSIRIS_VERSION}.zip \
+    && unzip ${OSIRIS_VERSION}.zip \
+    && cd osiris-mini-${OSIRIS_VERSION} \
+    && make DEVELOPMENT='' -j4 && make DEVELOPMENT='' install
 
 RUN ldconfig
 

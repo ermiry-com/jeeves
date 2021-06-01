@@ -3,9 +3,6 @@
 
 #include <bson/bson.h>
 
-#include <cerver/types/types.h>
-#include <cerver/types/string.h>
-
 #include <cerver/collections/dlist.h>
 
 #include "models/user.h"
@@ -15,8 +12,39 @@
 struct _HttpReceive;
 struct _HttpResponse;
 
+typedef enum JeevesUserInput {
+
+	JEEVES_USER_INPUT_NONE			= 0,
+	JEEVES_USER_INPUT_NAME			= 1,
+	JEEVES_USER_INPUT_USERNAME		= 2,
+	JEEVES_USER_INPUT_EMAIL			= 4,
+	JEEVES_USER_INPUT_PASSWORD		= 8,
+	JEEVES_USER_INPUT_CONFIRM		= 16,
+	JEEVES_USER_INPUT_MATCH			= 32,
+
+} JeevesUserInput;
+
+#define JEEVES_USER_ERROR_MAP(XX)					\
+	XX(0,	NONE, 				None)				\
+	XX(1,	BAD_REQUEST, 		Bad Request)		\
+	XX(2,	MISSING_VALUES, 	Missing Values)		\
+	XX(3,	REPEATED, 			Existing Email)		\
+	XX(4,	NOT_FOUND, 			Not found)			\
+	XX(5,	WRONG_PSWD, 		Wrong password)		\
+	XX(6,	SERVER_ERROR, 		Server Error)
+
+typedef enum JeevesUserError {
+
+	#define XX(num, name, string) JEEVES_USER_ERROR_##name = num,
+	JEEVES_USER_ERROR_MAP (XX)
+	#undef XX
+
+} JeevesUserError;
+
 extern const bson_t *user_login_query_opts;
-extern DoubleList *user_login_select;
+extern const bson_t *user_transactions_query_opts;
+extern const bson_t *user_categories_query_opts;
+extern const bson_t *user_places_query_opts;
 
 extern struct _HttpResponse *users_works;
 extern struct _HttpResponse *missing_user_values;
@@ -36,10 +64,12 @@ extern User *jeeves_user_create (
 	const bson_oid_t *role_oid
 );
 
+extern User *jeeves_user_get (void);
+
 extern User *jeeves_user_get_by_email (const char *email);
 
 extern u8 jeeves_user_check_by_email (
-	const struct _HttpReceive *http_receive, const char *email
+	const char *email
 );
 
 // {
@@ -48,9 +78,23 @@ extern u8 jeeves_user_check_by_email (
 //   "id": "5eb2b13f0051f70011e9d3af",
 //   "name": "Erick Salas",
 //   "role": "god",
-//   "username": "erick",
+//   "username": "erick"
 // }
 extern void *jeeves_user_parse_from_json (void *user_json_ptr);
+
+extern unsigned int jeeves_user_generate_token (
+	const User *user, char *json_token, size_t *json_len
+);
+
+extern User *jeeves_user_register (
+	const String *request_body, 
+	JeevesUserError *error, JeevesUserInput *input
+);
+
+extern User *jeeves_user_login (
+	const String *request_body, 
+	JeevesUserError *error, JeevesUserInput *input
+);
 
 extern void jeeves_user_delete (void *user_ptr);
 

@@ -3,27 +3,24 @@
 
 #include <time.h>
 
-#include <mongoc/mongoc.h>
 #include <bson/bson.h>
+#include <mongoc/mongoc.h>
 
 #include <cerver/types/types.h>
 
 #include <cerver/collections/dlist.h>
 
-#define JOB_ID_LEN						32
-#define JOB_NAME_LEN					512
-#define JOB_DESCRIPTION_LEN				1024
+#define JOB_ID_SIZE						32
+#define JOB_NAME_SIZE					512
+#define JOB_DESCRIPTION_SIZE			1024
 
-#define JOB_IMAGE_SAVED_LEN				512
-#define JOB_IMAGE_ORIGINAL_LEN			512
-#define JOB_IMAGE_RESULT_LEN			512
+#define JOB_IMAGE_SAVED_SIZE			512
+#define JOB_IMAGE_ORIGINAL_SIZE			512
+#define JOB_IMAGE_RESULT_SIZE			512
 
-extern mongoc_collection_t *jobs_collection;
+extern unsigned int jobs_model_init (void);
 
-// opens handle to jobs collection
-extern unsigned int jobs_collection_get (void);
-
-extern void jobs_collection_close (void);
+extern void jobs_model_end (void);
 
 #define JOB_STATUS_MAP(XX)						\
 	XX(0,	NONE, 			None)				\
@@ -42,7 +39,7 @@ typedef enum JobStatus {
 
 } JobStatus;
 
-extern const char *job_status_to_string (JobStatus status);
+extern const char *job_status_to_string (const JobStatus status);
 
 #define JOB_TYPE_MAP(XX)						\
 	XX(0,	NONE, 			None)				\
@@ -59,16 +56,16 @@ typedef enum JobType {
 
 } JobType;
 
-extern const char *job_type_to_string (JobType type);
+extern const char *job_type_to_string (const JobType type);
 
 extern JobType job_type_from_string (const char *type_string);
 
 typedef struct JobImage {
 
 	int id;
-	char saved[JOB_IMAGE_SAVED_LEN];
-	char original[JOB_IMAGE_ORIGINAL_LEN];
-	char result[JOB_IMAGE_RESULT_LEN];
+	char saved[JOB_IMAGE_SAVED_SIZE];
+	char original[JOB_IMAGE_ORIGINAL_SIZE];
+	char result[JOB_IMAGE_RESULT_SIZE];
 
 } JobImage;
 
@@ -87,13 +84,13 @@ extern bson_t *job_image_to_bson (JobImage *job_image);
 
 typedef struct JeevesJob {
 
-	char id[JOB_ID_LEN];
+	char id[JOB_ID_SIZE];
 	bson_oid_t oid;
 
 	bson_oid_t user_oid;
 
-	char name[JOB_NAME_LEN];
-	char description[JOB_DESCRIPTION_LEN];
+	char name[JOB_NAME_SIZE];
+	char description[JOB_DESCRIPTION_SIZE];
 
 	JobStatus status;
 
@@ -113,18 +110,7 @@ extern void *jeeves_job_new (void);
 
 extern void jeeves_job_delete (void *job_ptr);
 
-extern void jeeves_job_print (JeevesJob *job);
-
-extern bson_t *jeeves_job_query_oid (const bson_oid_t *oid);
-
-extern bson_t *jeeves_job_query_oid_and_user (
-	const bson_oid_t *oid, const bson_oid_t *user_oid
-);
-
-extern const bson_t *jeeves_job_find_by_oid_and_user (
-	const bson_oid_t *oid, const bson_oid_t *user_oid,
-	const bson_t *query_opts
-);
+extern void jeeves_job_print (const JeevesJob *job);
 
 extern u8 jeeves_job_get_by_oid_and_user (
 	JeevesJob *job,
@@ -132,37 +118,52 @@ extern u8 jeeves_job_get_by_oid_and_user (
 	const bson_t *query_opts
 );
 
-extern bson_t *jeeves_job_to_bson (JeevesJob *job);
-
-extern bson_t *jeeves_job_update_bson (JeevesJob *job);
-
-extern bson_t *jeeves_job_config_update_bson (JeevesJob *job);
-
-extern bson_t *jeeves_job_status_update_bson (JobStatus status);
-
-extern bson_t *jeeves_job_type_update_bson (JobType type);
-
-extern bson_t *jeeves_job_images_add_bson (DoubleList *images);
-
-extern bson_t *jeeves_job_image_query (
-	bson_oid_t *oid, int image_id
+extern u8 jeeves_job_get_by_oid_and_user_to_json (
+	const bson_oid_t *oid, const bson_oid_t *user_oid,
+	const bson_t *query_opts,
+	char **json, size_t *json_len
 );
 
-extern bson_t *jeeves_job_image_result_update (
+extern unsigned int jobs_get_all_by_user_to_json (
+	const bson_oid_t *user_oid, const bson_t *opts,
+	char **json, size_t *json_len
+);
+
+extern unsigned int jeeves_job_insert_one (
+	const JeevesJob *job
+);
+
+extern unsigned int jeeves_job_update_one (
+	const JeevesJob *job
+);
+
+extern unsigned int jeeves_job_update_status (
+	const bson_oid_t *job_oid, const JobStatus status
+);
+
+extern unsigned int jeeves_job_update_config (
+	const JeevesJob *job
+);
+
+extern unsigned int jeeves_job_update_images (
+	const bson_oid_t *job_oid, DoubleList *images
+);
+
+extern unsigned int jeeves_job_update_image_result (
+	const bson_oid_t *job_oid, const int image_id,
 	const char *result
 );
 
-extern bson_t *jeeves_job_start_update_bson (void);
+extern unsigned int jeeves_job_update_start (
+	const bson_oid_t *job_oid
+);
 
-extern bson_t *jeeves_job_stop_update_bson (void);
+extern unsigned int jeeves_job_update_stop (
+	const bson_oid_t *job_oid
+);
 
-extern bson_t *jeeves_job_end_update_bson (void);
-
-extern int jeeves_job_update_one (bson_t *query, bson_t *update);
-
-// get all the jobs that are related to a user
-extern mongoc_cursor_t *jeeves_jobs_get_all_by_user (
-	const bson_oid_t *user_oid, const bson_t *opts
+extern unsigned int jeeves_job_update_end (
+	const bson_oid_t *job_oid
 );
 
 #endif

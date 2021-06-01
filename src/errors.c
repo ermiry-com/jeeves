@@ -6,7 +6,9 @@
 #include "jeeves.h"
 #include "errors.h"
 
-const char *jeeves_error_to_string (JeevesError type) {
+#include "controllers/service.h"
+
+const char *jeeves_error_to_string (const JeevesError type) {
 
 	switch (type) {
 		#define XX(num, name, string) case JEEVES_ERROR_##name: return #string;
@@ -19,7 +21,7 @@ const char *jeeves_error_to_string (JeevesError type) {
 }
 
 void jeeves_error_send_response (
-	JeevesError error,
+	const JeevesError error,
 	const HttpReceive *http_receive
 ) {
 
@@ -27,7 +29,7 @@ void jeeves_error_send_response (
 		case JEEVES_ERROR_NONE: break;
 
 		case JEEVES_ERROR_BAD_REQUEST:
-			(void) http_response_send (bad_request, http_receive);
+			(void) http_response_send (bad_request_error, http_receive);
 			break;
 
 		case JEEVES_ERROR_MISSING_VALUES:
@@ -35,7 +37,7 @@ void jeeves_error_send_response (
 			break;
 
 		case JEEVES_ERROR_BAD_USER:
-			(void) http_response_send (bad_user, http_receive);
+			(void) http_response_send (bad_user_error, http_receive);
 			break;
 
 		case JEEVES_ERROR_SERVER_ERROR:

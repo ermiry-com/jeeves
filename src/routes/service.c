@@ -13,6 +13,8 @@
 
 #include "models/user.h"
 
+#include "controllers/service.h"
+
 // GET /api/jeeves
 void jeeves_handler (
 	const HttpReceive *http_receive,
@@ -50,7 +52,17 @@ void jeeves_auth_handler (
 	}
 
 	else {
-		(void) http_response_send (bad_user, http_receive);
+		(void) http_response_send (bad_user_error, http_receive);
 	}
+
+}
+
+// GET *
+void jeeves_catch_all_handler (
+	const HttpReceive *http_receive,
+	const HttpRequest *request
+) {
+
+	http_response_send (catch_all, http_receive);
 
 }

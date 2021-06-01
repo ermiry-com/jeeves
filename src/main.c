@@ -13,11 +13,11 @@
 #include <cerver/http/http.h>
 #include <cerver/http/route.h>
 
-#include <cerver/utils/utils.h>
 #include <cerver/utils/log.h>
+#include <cerver/utils/utils.h>
 
+#include "files.h"
 #include "jeeves.h"
-#include "handler.h"
 #include "version.h"
 
 #include "controllers/users.h"
@@ -26,10 +26,15 @@
 #include "routes/service.h"
 #include "routes/users.h"
 
-Cerver *jeeves_cerver = NULL;
+bool running = false;
+
+static Cerver *jeeves_cerver = NULL;
+HttpCerver *http_cerver = NULL;
 
 static void end (int dummy) {
-	
+
+	running = false;
+
 	if (jeeves_cerver) {
 		cerver_stats_print (jeeves_cerver, false, false);
 		cerver_log_msg ("\nHTTP Cerver stats:\n");
@@ -130,21 +135,6 @@ static void jeeves_set_users_routes (HttpCerver *http_cerver) {
 
 }
 
-static String *jeeves_uploads_dirname_generator (
-	const CerverReceive *cr
-) {
-
-	String *dirname = str_new (NULL);
-	dirname->str = c_string_create (
-		"%d-%ld",
-		cr->connection->socket->sock_fd, time (NULL)
-	);
-	dirname->len = strlen (dirname->str);
-
-	return dirname;
-
-}
-
 static void start (void) {
 
 	jeeves_cerver = cerver_create (
@@ -163,14 +153,17 @@ static void start (void) {
 		cerver_set_handler_type (jeeves_cerver, CERVER_HANDLER_TYPE_THREADS);
 
 		/*** web cerver configuration ***/
-		HttpCerver *http_cerver = (HttpCerver *) jeeves_cerver->cerver_data;
+		http_cerver = (HttpCerver *) jeeves_cerver->cerver_data;
 
 		http_cerver_set_uploads_path (http_cerver, JEEVES_UPLOADS_TEMP_DIR);
 		http_cerver_set_uploads_dirname_generator (http_cerver, jeeves_uploads_dirname_generator);
 
 		http_cerver_auth_set_jwt_algorithm (http_cerver, JWT_ALG_RS256);
-		http_cerver_auth_set_jwt_priv_key_filename (http_cerver, "keys/key.key");
-		http_cerver_auth_set_jwt_pub_key_filename (http_cerver, "keys/key.pub");
+		if (ENABLE_USERS_ROUTES) {
+			http_cerver_auth_set_jwt_priv_key_filename (http_cerver, PRIV_KEY);
+		}
+
+		http_cerver_auth_set_jwt_pub_key_filename (http_cerver, PUB_KEY);
 
 		jeeves_set_routes (http_cerver);
 
@@ -180,6 +173,8 @@ static void start (void) {
 
 		// add a catch all route
 		http_cerver_set_catch_all_route (http_cerver, jeeves_catch_all_handler);
+
+		running = true;
 
 		if (cerver_start (jeeves_cerver)) {
 			cerver_log_error (
@@ -213,7 +208,9 @@ int main (int argc, const char **argv) {
 
 	cerver_version_print_full ();
 
+	cerver_log_line_break ();
 	jeeves_version_print_full ();
+	cerver_log_line_break ();
 
 	if (!jeeves_init ()) {
 		start ();

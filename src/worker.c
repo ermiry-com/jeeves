@@ -263,7 +263,7 @@ void *jeeves_jobs_worker_thread (void *worker_job_ptr) {
 			name_len = strlen (end) - strlen (JEEVES_UPLOADS_PATH) - ext_len;
 
 			(void) snprintf (
-				job_image->result, JOB_IMAGE_RESULT_LEN,
+				job_image->result, JOB_IMAGE_RESULT_SIZE,
 				"%s%.*s-out.jpg",
 				JEEVES_UPLOADS_DIR,
 				(int) name_len, end + strlen (JEEVES_UPLOADS_PATH)
@@ -324,18 +324,17 @@ void *jeeves_jobs_worker_thread (void *worker_job_ptr) {
 			}
 
 			// update image in the db!
-			(void) jeeves_job_update_one (
-				jeeves_job_image_query (&worker_job->job->oid, job_image->id),
-				jeeves_job_image_result_update (filename)
+			jeeves_job_update_image_result (
+				&worker_job->job->oid, job_image->id,
+				filename
 			);
 
 			cerver_log_success ("Done with: %s", job_image->original);
 		}
 
 		// we are done! - update job's status in the db
-		(void) jeeves_job_update_one (
-			jeeves_job_query_oid (&worker_job->job->oid),
-			jeeves_job_end_update_bson ()
+		(void) jeeves_job_update_end (
+			&worker_job->job->oid
 		);
 
 		// free allocated resources
@@ -392,8 +391,8 @@ JeevesUpload *jeeves_upload_new (const char *dirname, const char *user_id) {
 
 	JeevesUpload *upload = (JeevesUpload *) malloc (sizeof (JeevesUpload));
 	if (upload) {
-		(void) strncpy (upload->dirname, dirname, JEEVES_UPLOAD_USER_ID_LEN);
-		(void) strncpy (upload->user_id, user_id, JEEVES_UPLOAD_USER_ID_LEN);
+		(void) strncpy (upload->dirname, dirname, JEEVES_UPLOAD_USER_ID_SIZE - 1);
+		(void) strncpy (upload->user_id, user_id, JEEVES_UPLOAD_USER_ID_SIZE - 1);
 	}
 
 	return upload;
@@ -410,7 +409,7 @@ static unsigned int jeeves_uploads_worker_init (void) {
 
 	unsigned int retval = 1;
 
-	jeeves_uploads_worker_job_queue = job_queue_create ();
+	jeeves_uploads_worker_job_queue = job_queue_create (JOB_QUEUE_TYPE_JOBS);
 	if (jeeves_uploads_worker_job_queue) {
 		pthread_t thread_id = 0;
 		if (!thread_create_detachable (
@@ -449,11 +448,11 @@ unsigned int jeeves_uploads_worker_push (JeevesUpload *upload) {
 // from temporarly directory into persistant storage
 static void *jeeves_uploads_worker_thread (void *null_ptr) {
 
-	sleep (5);			// wait until cerver has started
+	(void) sleep (4);	// wait until cerver has started
 
 	cerver_log_success ("Jeeves UPLOADS WORKER thread has started!");
 
-	thread_set_name ("jeeves-uploads-worker");
+	(void) thread_set_name ("jeeves-uploads-worker");
 
 	Job *job = NULL;
 
@@ -462,7 +461,7 @@ static void *jeeves_uploads_worker_thread (void *null_ptr) {
 	char old_location[512] = { 0 };
 	char new_location[512] = { 0 };
 	char command[2048] = { 0 };
-	while (jeeves_cerver->isRunning) {
+	while (running) {
 		bsem_wait (jeeves_uploads_worker_job_queue->has_jobs);
 
 		// we are safe to analyze the frames & generate embeddings
